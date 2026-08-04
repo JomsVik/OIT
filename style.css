@@ -57,6 +57,8 @@
     --warning-glow: rgba(255, 170, 51, 0.3);
     --success: #33dd88;
     --success-glow: rgba(51, 221, 136, 0.2);
+    --purple: #7a3bb8;
+    --purple-glow: rgba(122, 59, 184, 0.3);
 }
 
 /* ============================================================
@@ -123,37 +125,56 @@ body {
     color: var(--accent);
 }
 
-.login-row {
+.login-tabs {
     display: flex;
-    gap: 0;
+    gap: 10px;
     margin-bottom: 16px;
 }
 
-.login-row input {
+.login-tab {
     flex: 1;
-    padding: 14px 18px;
-    font-size: 15px;
-    font-weight: 400;
-    background: #ffffff;
+    padding: 10px;
     border: 2px solid #e2e8f0;
-    border-right: none;
-    color: #1a202c;
-    outline: none;
-    transition: 0.2s;
+    border-radius: 8px;
+    background: transparent;
+    color: #4a5568;
+    font-weight: 700;
+    cursor: pointer;
     font-family: 'Inter', sans-serif;
-    border-radius: 8px 0 0 8px;
+    transition: 0.2s;
 }
 
-.login-row input::placeholder {
-    color: #a0aec0;
-}
-
-.login-row input:focus {
+.login-tab:hover {
     border-color: var(--accent);
-    box-shadow: inset 0 0 20px rgba(74, 158, 255, 0.05);
+    color: var(--accent);
 }
 
-.login-row input.error {
+.login-tab.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.login-container input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 15px;
+    margin-bottom: 10px;
+    background: #fff;
+    color: #1a202c;
+    font-family: 'Inter', sans-serif;
+    transition: 0.2s;
+    outline: none;
+}
+
+.login-container input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(74, 158, 255, 0.08);
+}
+
+.login-container input.error {
     border-color: var(--danger);
     box-shadow: 0 0 30px var(--danger-glow);
     animation: shake 0.4s;
@@ -166,84 +187,24 @@ body {
 }
 
 .btn-enter {
-    padding: 14px 28px;
+    width: 100%;
+    padding: 14px;
     background: var(--accent);
     color: #ffffff;
     border: none;
-    font-size: 18px;
-    font-weight: 800;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
     cursor: pointer;
     transition: 0.2s;
-    border-radius: 0 8px 8px 0;
     font-family: 'Inter', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    margin-top: 4px;
 }
 
 .btn-enter:hover {
     background: var(--accent-dark);
     box-shadow: 0 0 40px rgba(74, 158, 255, 0.3);
     transform: scale(1.02);
-}
-
-.btn-create-ticket {
-    width: 100%;
-    padding: 14px;
-    background: transparent;
-    color: var(--text-secondary);
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: 0.2s;
-    font-family: 'Inter', sans-serif;
-    margin-top: 8px;
-}
-
-.btn-create-ticket:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(74, 158, 255, 0.05);
-}
-
-.btn-track-tickets {
-    margin-top: 8px;
-    width: 100%;
-    padding: 12px;
-    background: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-weight: 600;
-    transition: 0.2s;
-    font-family: 'Inter', sans-serif;
-}
-
-.btn-track-tickets:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(74, 158, 255, 0.05);
-}
-
-.btn-find-ticket {
-    margin-top: 8px;
-    width: 100%;
-    padding: 12px;
-    background: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 8px;
-    color: #ffffff;
-    cursor: pointer;
-    font-weight: 700;
-    transition: 0.2s;
-    font-family: 'Inter', sans-serif;
-}
-
-.btn-find-ticket:hover {
-    background: var(--accent-dark);
-    box-shadow: 0 0 30px rgba(74, 158, 255, 0.3);
 }
 
 .login-hint {
@@ -258,33 +219,14 @@ body {
     opacity: 1;
 }
 
-/* ============================================================
-   СКРЫТОЕ ПОЛЕ ДЛЯ ВХОДА АДМИНА
-   ============================================================ */
-
-#admin-login-section {
-    animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-#admin-login-section .login-row input {
-    background: var(--bg-primary);
-    border: 2px solid var(--accent);
-    color: var(--text-primary);
-}
-
-#admin-login-section .login-row input:focus {
-    box-shadow: 0 0 30px rgba(74, 158, 255, 0.2);
+.phones-footer {
+    margin-top: auto;
+    padding-top: 32px;
+    font-size: 12px;
+    color: #718096;
+    text-align: center;
+    font-weight: 400;
+    letter-spacing: 0.3px;
 }
 
 /* ============================================================
@@ -395,18 +337,8 @@ body {
     color: #2d3748;
 }
 
-.phones-footer {
-    margin-top: auto;
-    padding-top: 32px;
-    font-size: 12px;
-    color: #718096;
-    text-align: center;
-    font-weight: 400;
-    letter-spacing: 0.3px;
-}
-
 /* ============================================================
-   ЭКРАН ОТСЛЕЖИВАНИЯ (СВЕТЛАЯ ТЕМА)
+   ЭКРАН МОИХ ЗАЯВОК (СВЕТЛАЯ ТЕМА)
    ============================================================ */
 
 #screen-track-tickets {
@@ -436,48 +368,6 @@ body {
     color: #1a202c;
     font-size: 24px;
     font-weight: 700;
-}
-
-.track-header .btn-create-ticket {
-    padding: 10px 24px;
-    font-size: 14px;
-    background: var(--accent);
-    color: #ffffff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: 0.2s;
-    width: auto;
-    margin: 0;
-}
-
-.track-header .btn-create-ticket:hover {
-    background: var(--accent-dark);
-    transform: scale(1.02);
-}
-
-.track-header .btn-clear-tokens {
-    padding: 10px 20px;
-    font-size: 13px;
-    background: var(--danger);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: 0.2s;
-}
-
-.track-header .btn-clear-tokens:hover {
-    background: #cc2244;
-    transform: scale(1.02);
-}
-
-.track-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
 }
 
 .track-card {
@@ -541,10 +431,6 @@ body {
     color: var(--danger);
 }
 
-.track-card-body {
-    margin-bottom: 10px;
-}
-
 .track-problem {
     font-size: 15px;
     color: #2d3748;
@@ -563,16 +449,6 @@ body {
     display: flex;
     align-items: center;
     gap: 4px;
-}
-
-.track-user-comment {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: #ffffff;
-    border-radius: 6px;
-    font-size: 13px;
-    color: #4a5568;
-    border-left: 2px solid #e2e8f0;
 }
 
 .track-comments {
@@ -598,22 +474,56 @@ body {
 }
 
 .track-comments .comment-item {
-    background: #f7fafc;
-    padding: 8px 12px;
+    padding: 10px 14px;
     border-radius: 6px;
     margin: 6px 0;
-    border-left: 2px solid var(--accent);
+    transition: 0.2s;
 }
 
-.track-comments .comment-text {
+.track-comments .comment-item:hover {
+    transform: translateX(4px);
+}
+
+.track-comments .comment-item .comment-text {
     font-size: 13px;
-    color: #2d3748;
+    margin-bottom: 2px;
 }
 
-.track-comments .comment-meta {
+.track-comments .comment-item .comment-meta {
     font-size: 11px;
-    color: #a0aec0;
-    margin-top: 2px;
+    color: var(--text-muted);
+}
+
+.track-comments .comment-item .comment-badge {
+    font-size: 9px;
+    padding: 1px 8px;
+}
+
+.comment-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-left: 8px;
+}
+
+.comment-badge.admin {
+    background: rgba(74, 158, 255, 0.15);
+    color: #4a9eff;
+    border: 1px solid rgba(74, 158, 255, 0.3);
+}
+
+.comment-badge.user {
+    background: rgba(51, 221, 136, 0.15);
+    color: #33dd88;
+    border: 1px solid rgba(51, 221, 136, 0.3);
+}
+
+.comment-icon {
+    margin-right: 6px;
 }
 
 .track-card-footer {
@@ -685,6 +595,49 @@ body {
 .track-empty .btn-create-ticket:hover {
     background: var(--accent-dark);
     transform: scale(1.02);
+}
+
+.btn-logout-track {
+    padding: 10px 24px;
+    background: #fc8181;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-logout-track:hover {
+    background: #f56565;
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(245, 101, 101, 0.3);
+}
+
+.track-comment-form input {
+    transition: 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.track-comment-form input:focus {
+    border-color: #4a9eff !important;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+}
+
+.track-comment-form button {
+    transition: 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.track-comment-form button:hover {
+    background: #2a7acc !important;
+    transform: scale(1.02);
+}
+
+.track-comment-form button:active {
+    transform: scale(0.98);
 }
 
 /* ============================================================
@@ -956,11 +909,50 @@ body {
 }
 
 /* ============================================================
-   АДМИНКА (ТЕМНАЯ ТЕМА)
+   АДМИНКА (ТЕМНАЯ ТЕМА - ФИОЛЕТОВЫЙ ГРАДИЕНТ)
    ============================================================ */
 
 #screen-admin {
-    background: var(--bg-primary);
+    background: linear-gradient(145deg, #1a0a2e 0%, #0d0a1a 40%, #1a0a2e 100%);
+    position: relative;
+    min-height: 100vh;
+}
+
+#screen-admin::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 300px;
+    background: linear-gradient(180deg, 
+        rgba(120, 40, 200, 0.15) 0%,
+        rgba(120, 40, 200, 0.08) 40%,
+        rgba(120, 40, 200, 0.03) 70%,
+        transparent 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+#screen-admin::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(ellipse at 20% 0%, rgba(120, 40, 200, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 0%, rgba(120, 40, 200, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 100%, rgba(120, 40, 200, 0.04) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+#screen-admin > * {
+    position: relative;
+    z-index: 1;
 }
 
 .admin-header {
@@ -977,7 +969,7 @@ body {
     font-weight: 800;
     letter-spacing: -0.5px;
     color: var(--text-primary);
-    text-shadow: 0 0 30px rgba(74, 158, 255, 0.1);
+    text-shadow: 0 0 40px rgba(120, 40, 200, 0.2), 0 0 80px rgba(120, 40, 200, 0.1);
 }
 
 .admin-role {
@@ -989,6 +981,7 @@ body {
     padding: 6px 16px;
     border: 2px solid var(--border-color);
     border-radius: 6px;
+    transition: 0.3s;
 }
 
 .admin-role.super {
@@ -996,6 +989,13 @@ body {
     border-color: var(--warning);
     text-shadow: 0 0 30px var(--warning-glow);
     box-shadow: 0 0 30px var(--warning-glow);
+}
+
+.admin-role.director {
+    color: var(--purple);
+    border-color: var(--purple);
+    text-shadow: 0 0 30px var(--purple-glow);
+    box-shadow: 0 0 30px var(--purple-glow);
 }
 
 .admin-nav {
@@ -1052,7 +1052,7 @@ body {
 }
 
 /* ============================================================
-   КАРТОЧКИ ЗАЯВОК (ТЕМНАЯ ТЕМА - С МЕРЦАНИЕМ)
+   КАРТОЧКИ ЗАЯВОК - С МЕРЦАНИЕМ
    ============================================================ */
 
 .ticket-card {
@@ -1072,260 +1072,86 @@ body {
     box-shadow: 0 0 40px rgba(74, 158, 255, 0.08);
 }
 
-/* Цвета простоя - ТЕМНАЯ ТЕМА С МЕРЦАНИЕМ */
-/* ============================================================
-   ЦВЕТА ПРОСТОЯ - ТЕМНАЯ ТЕМА (ВСЕ С УСИЛЕННЫМ МЕРЦАНИЕМ)
-   ============================================================ */
-
-[data-theme="dark"] .ticket-normal {
+.ticket-normal {
     border-left-color: #4a9eff;
     border-left-width: 4px;
     animation: pulse-blue 3s infinite;
 }
 
-[data-theme="dark"] .ticket-warning-1h {
+.ticket-warning-1h {
     border-left-color: #ffdd00;
     border-left-width: 6px;
     background: rgba(255, 221, 0, 0.06);
     animation: pulse-yellow 2.4s infinite;
 }
-[data-theme="dark"] .ticket-warning-1h .meta {
+.ticket-warning-1h .meta {
     color: #ffdd00;
     font-weight: 600;
 }
-[data-theme="dark"] .ticket-warning-1h .ticket-desc {
-    color: #ffffff;
-}
 
-[data-theme="dark"] .ticket-warning-3h {
+.ticket-warning-3h {
     border-left-color: #ff8800;
     border-left-width: 6px;
     background: rgba(255, 136, 0, 0.08);
     animation: pulse-orange 2.2s infinite;
 }
-[data-theme="dark"] .ticket-warning-3h .meta {
+.ticket-warning-3h .meta {
     color: #ff8800;
     font-weight: 700;
 }
-[data-theme="dark"] .ticket-warning-3h .ticket-desc {
-    color: #ffffff;
-}
-[data-theme="dark"] .ticket-warning-3h .ticket-header strong {
-    color: #ffaa44;
-}
 
-[data-theme="dark"] .ticket-urgent-6h {
+.ticket-urgent-6h {
     border-left-color: #ff0033;
     border-left-width: 6px;
     background: rgba(255, 0, 51, 0.10);
     animation: pulse-red 2s infinite;
 }
-[data-theme="dark"] .ticket-urgent-6h .meta {
+.ticket-urgent-6h .meta {
     color: #ff3355;
     font-weight: 700;
 }
-[data-theme="dark"] .ticket-urgent-6h .ticket-desc {
-    color: #ffffff;
-}
-[data-theme="dark"] .ticket-urgent-6h .ticket-header strong {
-    color: #ff4466;
-}
-[data-theme="dark"] .ticket-urgent-6h .location {
-    color: #ff8899;
-}
 
-[data-theme="dark"] .ticket-urgent-24h {
+.ticket-urgent-24h {
     border-left-color: #ff0022;
     border-left-width: 8px;
     background: rgba(255, 0, 34, 0.15);
     animation: pulse-urgent 1.8s infinite;
 }
-[data-theme="dark"] .ticket-urgent-24h .meta {
+.ticket-urgent-24h .meta {
     color: #ff3355;
     font-weight: 800;
     font-size: 13px;
 }
-[data-theme="dark"] .ticket-urgent-24h .ticket-desc {
-    color: #ffffff;
-    font-weight: 500;
-}
-[data-theme="dark"] .ticket-urgent-24h .ticket-header strong {
-    color: #ff4466;
-    font-size: 18px;
-}
-[data-theme="dark"] .ticket-urgent-24h .location {
-    color: #ff8899;
-    font-weight: 600;
-}
-[data-theme="dark"] .ticket-urgent-24h .ticket-id {
-    color: #ff4466;
-    font-weight: 800;
-}
-[data-theme="dark"] .ticket-urgent-24h .ticket-comment {
-    background: rgba(255, 0, 34, 0.15);
-    border-left-color: #ff0022;
-    color: #ff8899;
-}
 
-/* ============================================================
-   УСИЛЕННЫЕ АНИМАЦИИ (ВСЕ КАК У ТЕМНО-КРАСНОГО)
-   ============================================================ */
-
-/* СИНИЙ - усиленное мерцание */
 @keyframes pulse-blue {
-    0% { 
-        border-left-color: #4a9eff;
-        box-shadow: inset 0 0 60px rgba(74, 158, 255, 0.08), 0 0 30px rgba(74, 158, 255, 0.10);
-    }
-    50% { 
-        border-left-color: #7bb8ff;
-        box-shadow: inset 0 0 120px rgba(74, 158, 255, 0.15), 0 0 60px rgba(74, 158, 255, 0.25);
-    }
-    100% { 
-        border-left-color: #4a9eff;
-        box-shadow: inset 0 0 60px rgba(74, 158, 255, 0.08), 0 0 30px rgba(74, 158, 255, 0.10);
-    }
+    0% { border-left-color: #4a9eff; box-shadow: inset 0 0 60px rgba(74, 158, 255, 0.08), 0 0 30px rgba(74, 158, 255, 0.10); }
+    50% { border-left-color: #7bb8ff; box-shadow: inset 0 0 120px rgba(74, 158, 255, 0.15), 0 0 60px rgba(74, 158, 255, 0.25); }
+    100% { border-left-color: #4a9eff; box-shadow: inset 0 0 60px rgba(74, 158, 255, 0.08), 0 0 30px rgba(74, 158, 255, 0.10); }
 }
 
-/* ЖЕЛТЫЙ - усиленное мерцание */
 @keyframes pulse-yellow {
-    0% { 
-        border-left-color: #ffdd00;
-        box-shadow: inset 0 0 60px rgba(255, 221, 0, 0.08), 0 0 30px rgba(255, 221, 0, 0.10);
-    }
-    50% { 
-        border-left-color: #ffee66;
-        box-shadow: inset 0 0 120px rgba(255, 221, 0, 0.15), 0 0 60px rgba(255, 221, 0, 0.25);
-    }
-    100% { 
-        border-left-color: #ffdd00;
-        box-shadow: inset 0 0 60px rgba(255, 221, 0, 0.08), 0 0 30px rgba(255, 221, 0, 0.10);
-    }
+    0% { border-left-color: #ffdd00; box-shadow: inset 0 0 60px rgba(255, 221, 0, 0.08), 0 0 30px rgba(255, 221, 0, 0.10); }
+    50% { border-left-color: #ffee66; box-shadow: inset 0 0 120px rgba(255, 221, 0, 0.15), 0 0 60px rgba(255, 221, 0, 0.25); }
+    100% { border-left-color: #ffdd00; box-shadow: inset 0 0 60px rgba(255, 221, 0, 0.08), 0 0 30px rgba(255, 221, 0, 0.10); }
 }
 
-/* ОРАНЖЕВЫЙ - усиленное мерцание */
 @keyframes pulse-orange {
-    0% { 
-        border-left-color: #ff8800;
-        box-shadow: inset 0 0 60px rgba(255, 136, 0, 0.08), 0 0 30px rgba(255, 136, 0, 0.10);
-    }
-    50% { 
-        border-left-color: #ffaa44;
-        box-shadow: inset 0 0 120px rgba(255, 136, 0, 0.15), 0 0 60px rgba(255, 136, 0, 0.25);
-    }
-    100% { 
-        border-left-color: #ff8800;
-        box-shadow: inset 0 0 60px rgba(255, 136, 0, 0.08), 0 0 30px rgba(255, 136, 0, 0.10);
-    }
+    0% { border-left-color: #ff8800; box-shadow: inset 0 0 60px rgba(255, 136, 0, 0.08), 0 0 30px rgba(255, 136, 0, 0.10); }
+    50% { border-left-color: #ffaa44; box-shadow: inset 0 0 120px rgba(255, 136, 0, 0.15), 0 0 60px rgba(255, 136, 0, 0.25); }
+    100% { border-left-color: #ff8800; box-shadow: inset 0 0 60px rgba(255, 136, 0, 0.08), 0 0 30px rgba(255, 136, 0, 0.10); }
 }
 
-/* КРАСНЫЙ - усиленное мерцание */
 @keyframes pulse-red {
-    0% { 
-        border-left-color: #ff0033;
-        box-shadow: inset 0 0 60px rgba(255, 0, 51, 0.08), 0 0 30px rgba(255, 0, 51, 0.10);
-    }
-    50% { 
-        border-left-color: #ff4477;
-        box-shadow: inset 0 0 120px rgba(255, 0, 51, 0.15), 0 0 60px rgba(255, 0, 51, 0.25);
-    }
-    100% { 
-        border-left-color: #ff0033;
-        box-shadow: inset 0 0 60px rgba(255, 0, 51, 0.08), 0 0 30px rgba(255, 0, 51, 0.10);
-    }
+    0% { border-left-color: #ff0033; box-shadow: inset 0 0 60px rgba(255, 0, 51, 0.08), 0 0 30px rgba(255, 0, 51, 0.10); }
+    50% { border-left-color: #ff4477; box-shadow: inset 0 0 120px rgba(255, 0, 51, 0.15), 0 0 60px rgba(255, 0, 51, 0.25); }
+    100% { border-left-color: #ff0033; box-shadow: inset 0 0 60px rgba(255, 0, 51, 0.08), 0 0 30px rgba(255, 0, 51, 0.10); }
 }
 
-/* ТЕМНО-КРАСНЫЙ (УРГЕНТНЫЙ) - усиленное мерцание */
 @keyframes pulse-urgent {
-    0% { 
-        border-left-color: #ff0022;
-        box-shadow: inset 0 0 60px rgba(255, 0, 34, 0.08), 0 0 30px rgba(255, 0, 34, 0.10);
-    }
-    50% { 
-        border-left-color: #ff4477;
-        box-shadow: inset 0 0 120px rgba(255, 0, 34, 0.15), 0 0 60px rgba(255, 0, 34, 0.25);
-    }
-    100% { 
-        border-left-color: #ff0022;
-        box-shadow: inset 0 0 60px rgba(255, 0, 34, 0.08), 0 0 30px rgba(255, 0, 34, 0.10);
-    }
+    0% { border-left-color: #ff0022; box-shadow: inset 0 0 60px rgba(255, 0, 34, 0.08), 0 0 30px rgba(255, 0, 34, 0.10); }
+    50% { border-left-color: #ff4477; box-shadow: inset 0 0 120px rgba(255, 0, 34, 0.15), 0 0 60px rgba(255, 0, 34, 0.25); }
+    100% { border-left-color: #ff0022; box-shadow: inset 0 0 60px rgba(255, 0, 34, 0.08), 0 0 30px rgba(255, 0, 34, 0.10); }
 }
-/* Цвета простоя - СВЕТЛАЯ ТЕМА (БЕЗ МЕРЦАНИЯ) */
-[data-theme="light"] .ticket-normal {
-    border-left-color: #4a9eff;
-    border-left-width: 4px;
-}
-
-[data-theme="light"] .ticket-warning-1h {
-    border-left-color: #e6c300;
-    border-left-width: 6px;
-    background: rgba(230, 195, 0, 0.06);
-}
-[data-theme="light"] .ticket-warning-1h .meta {
-    color: #b39700;
-    font-weight: 600;
-}
-
-[data-theme="light"] .ticket-warning-3h {
-    border-left-color: #e67300;
-    border-left-width: 6px;
-    background: rgba(230, 115, 0, 0.08);
-}
-[data-theme="light"] .ticket-warning-3h .meta {
-    color: #cc6600;
-    font-weight: 700;
-}
-[data-theme="light"] .ticket-warning-3h .ticket-header strong {
-    color: #cc6600;
-}
-
-[data-theme="light"] .ticket-urgent-6h {
-    border-left-color: #cc0028;
-    border-left-width: 6px;
-    background: rgba(204, 0, 40, 0.10);
-}
-[data-theme="light"] .ticket-urgent-6h .meta {
-    color: #cc0028;
-    font-weight: 700;
-}
-[data-theme="light"] .ticket-urgent-6h .ticket-header strong {
-    color: #cc0028;
-}
-[data-theme="light"] .ticket-urgent-6h .location {
-    color: #cc3355;
-}
-
-[data-theme="light"] .ticket-urgent-24h {
-    border-left-color: #990022;
-    border-left-width: 8px;
-    background: rgba(153, 0, 34, 0.12);
-}
-[data-theme="light"] .ticket-urgent-24h .meta {
-    color: #cc0028;
-    font-weight: 800;
-    font-size: 13px;
-}
-[data-theme="light"] .ticket-urgent-24h .ticket-header strong {
-    color: #cc0028;
-    font-size: 18px;
-}
-[data-theme="light"] .ticket-urgent-24h .location {
-    color: #cc3355;
-    font-weight: 600;
-}
-[data-theme="light"] .ticket-urgent-24h .ticket-id {
-    color: #cc0028;
-    font-weight: 800;
-}
-[data-theme="light"] .ticket-urgent-24h .ticket-comment {
-    background: rgba(153, 0, 34, 0.08);
-    border-left-color: #990022;
-    color: #cc3355;
-}
-
-/* ============================================================
-   ОСТАЛЬНЫЕ ЭЛЕМЕНТЫ ЗАЯВКИ
-   ============================================================ */
 
 .ticket-header {
     display: flex;
@@ -1396,62 +1222,6 @@ body {
     text-shadow: 0 0 20px rgba(74, 158, 255, 0.2);
 }
 
-/* ============================================================
-   УСТРОЙСТВО (IP + User-Agent)
-   ============================================================ */
-
-.ticket-device-info {
-    margin: 10px 0;
-    padding: 8px 14px;
-    background: var(--bg-primary);
-    border-radius: 6px;
-    font-size: 13px;
-    color: var(--text-muted);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px;
-    border: 1px solid var(--border-color);
-}
-
-.ticket-device-info .device-ip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-family: 'Courier New', monospace;
-}
-
-.ticket-device-info .ip-address {
-    color: var(--accent);
-    font-weight: 700;
-    background: var(--bg-secondary);
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-
-.ticket-device-info .device-ua {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    cursor: help;
-    padding: 2px 8px;
-    background: var(--bg-secondary);
-    border-radius: 4px;
-    border: 1px solid transparent;
-    transition: 0.2s;
-}
-
-.ticket-device-info .device-ua:hover {
-    border-color: var(--border-color);
-    background: var(--bg-hover);
-}
-
-/* ============================================================
-   КНОПКИ ДЕЙСТВИЙ
-   ============================================================ */
-
 .ticket-actions {
     display: flex;
     gap: 8px;
@@ -1459,11 +1229,7 @@ body {
     flex-wrap: wrap;
 }
 
-.ticket-actions button,
-.ticket-actions .btn-complete,
-.ticket-actions .btn-delete,
-.ticket-actions .btn-comment,
-.ticket-actions .btn-restore {
+.ticket-actions button {
     padding: 8px 18px;
     border: none;
     border-radius: 6px;
@@ -1521,6 +1287,27 @@ body {
     transform: scale(1.03);
 }
 
+.btn-reopen {
+    background: var(--warning);
+    color: var(--bg-primary);
+}
+
+.btn-reopen:hover {
+    background: #e69900;
+    box-shadow: 0 0 40px var(--warning-glow);
+    transform: scale(1.03);
+}
+
+.btn-edit-task {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+.btn-edit-task:hover {
+    background: var(--accent-dark);
+    box-shadow: 0 0 40px rgba(74, 158, 255, 0.4);
+}
+
 .info-message {
     padding: 8px 14px;
     background: var(--bg-primary);
@@ -1529,10 +1316,6 @@ body {
     font-size: 12px;
     color: var(--text-muted);
 }
-
-/* ============================================================
-   КОММЕНТАРИИ
-   ============================================================ */
 
 .ticket-comments {
     margin: 10px 0;
@@ -1683,46 +1466,6 @@ body {
     font-family: 'Inter', sans-serif;
 }
 
-.task-actions .btn-complete {
-    background: var(--accent);
-    color: var(--bg-primary);
-}
-
-.task-actions .btn-complete:hover {
-    background: var(--accent-dark);
-    box-shadow: 0 0 40px rgba(74, 158, 255, 0.4);
-}
-
-.task-actions .btn-reopen {
-    background: var(--warning);
-    color: var(--bg-primary);
-}
-
-.task-actions .btn-reopen:hover {
-    background: #e69900;
-    box-shadow: 0 0 40px var(--warning-glow);
-}
-
-.task-actions .btn-edit-task {
-    background: var(--accent);
-    color: var(--bg-primary);
-}
-
-.task-actions .btn-edit-task:hover {
-    background: var(--accent-dark);
-    box-shadow: 0 0 40px rgba(74, 158, 255, 0.4);
-}
-
-.task-actions .btn-delete {
-    background: var(--danger);
-    color: #fff;
-}
-
-.task-actions .btn-delete:hover {
-    background: #cc2244;
-    box-shadow: 0 0 40px var(--danger-glow);
-}
-
 /* ============================================================
    ИНВЕНТАРЬ
    ============================================================ */
@@ -1869,33 +1612,221 @@ body {
     box-shadow: 0 0 30px var(--danger-glow);
 }
 
-/* ============================================================
-   IP СТАТИСТИКА
-   ============================================================ */
-
-.device-cell {
-    min-width: 180px;
-}
-
-.device-tag {
-    display: inline-block;
-    padding: 3px 10px;
-    margin: 2px 4px 2px 0;
-    background: var(--bg-secondary);
+.inventory-section {
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    cursor: help;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    overflow: hidden;
     transition: 0.2s;
 }
 
-.device-tag:hover {
-    background: var(--bg-hover);
-    border-color: var(--accent);
+.inventory-section:hover {
+    border-color: var(--border-light);
+}
+
+.inventory-section summary {
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    list-style: none;
+    font-weight: 700;
     color: var(--text-primary);
+    transition: 0.2s;
+    user-select: none;
+}
+
+.inventory-section summary::-webkit-details-marker {
+    display: none;
+}
+
+.inventory-section summary::before {
+    content: '▶';
+    margin-right: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: 0.2s;
+}
+
+.inventory-section[open] summary::before {
+    content: '▼';
+}
+
+.inventory-section summary:hover {
+    background: var(--bg-hover);
+}
+
+.inventory-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 16px;
+}
+
+.inventory-section .section-header span {
+    font-size: 16px;
+}
+
+.inventory-section .btn-add-inventory {
+    margin: 0;
+    padding: 6px 16px;
+    font-size: 11px;
+}
+
+.inventory-section .table-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    border-top: 1px solid var(--border-color);
+}
+
+/* ============================================================
+   ОТЧЕТЫ
+   ============================================================ */
+
+.reports-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.report-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    transition: 0.3s;
+}
+
+.report-card:hover {
+    border-color: var(--border-light);
+    transform: translateY(-2px);
+}
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.report-header h3 {
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.report-date {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.report-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.report-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.report-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.report-actions button {
+    padding: 6px 14px;
+    font-size: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.report-table-container {
+    overflow-x: auto;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    font-size: 13px;
+}
+
+.report-table th {
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.report-table td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.report-table tr:hover td {
+    background: var(--bg-hover);
+}
+
+.editable-cell {
+    transition: 0.2s;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.editable-cell:hover {
+    background: var(--bg-hover);
+}
+
+.editable-cell:focus {
+    outline: 2px solid var(--accent);
+    background: var(--bg-secondary);
     box-shadow: 0 0 20px rgba(74, 158, 255, 0.1);
+}
+
+.report-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.report-toolbar button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: 'Inter', sans-serif;
 }
 
 /* ============================================================
@@ -2014,116 +1945,6 @@ body {
 }
 
 /* ============================================================
-   РАСКРЫВАЮЩИЕСЯ СЕКЦИИ ИНВЕНТАРЯ
-   ============================================================ */
-
-.inventory-section {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    margin-bottom: 16px;
-    overflow: hidden;
-    transition: 0.2s;
-}
-
-.inventory-section:hover {
-    border-color: var(--border-light);
-}
-
-.inventory-section summary {
-    padding: 16px 20px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    list-style: none;
-    font-weight: 700;
-    color: var(--text-primary);
-    transition: 0.2s;
-    user-select: none;
-}
-
-.inventory-section summary::-webkit-details-marker {
-    display: none;
-}
-
-.inventory-section summary::before {
-    content: '▶';
-    margin-right: 12px;
-    font-size: 12px;
-    color: var(--text-muted);
-    transition: 0.2s;
-}
-
-.inventory-section[open] summary::before {
-    content: '▼';
-}
-
-.inventory-section summary:hover {
-    background: var(--bg-hover);
-}
-
-.inventory-section .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    gap: 16px;
-}
-
-.inventory-section .section-header span {
-    font-size: 16px;
-}
-
-.inventory-section .btn-add-inventory {
-    margin: 0;
-    padding: 6px 16px;
-    font-size: 11px;
-    background: var(--accent);
-    color: var(--bg-primary);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: 0.2s;
-    font-family: 'Inter', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-
-.inventory-section .btn-add-inventory:hover {
-    background: var(--accent-dark);
-    box-shadow: 0 0 30px rgba(74, 158, 255, 0.3);
-}
-
-.inventory-section .table-wrapper {
-    overflow-x: auto;
-    overflow-y: visible;
-    margin: 0;
-    padding: 0;
-    position: relative;
-    border-top: 1px solid var(--border-color);
-}
-
-.inventory-section .table-wrapper::-webkit-scrollbar {
-    height: 8px;
-}
-
-.inventory-section .table-wrapper::-webkit-scrollbar-track {
-    background: var(--bg-primary);
-    border-radius: 4px;
-}
-
-.inventory-section .table-wrapper::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 4px;
-}
-
-.inventory-section .table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: var(--accent);
-}
-
-/* ============================================================
    МОДАЛЬНЫЕ ОКНА
    ============================================================ */
 
@@ -2135,7 +1956,7 @@ body {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
+    background-color: rgba(0, 0, 0, 0.85);
 }
 
 .modal.active {
@@ -2264,6 +2085,109 @@ body {
 }
 
 /* ============================================================
+   КНОПКА СОЗДАНИЯ ЗАЯВКИ В АДМИНКЕ
+   ============================================================ */
+
+.btn-create-ticket-admin {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #4a9eff 0%, #2a7acc 50%, #1a5aaa 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    box-shadow: 0 4px 20px rgba(74, 158, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(74, 158, 255, 0.15);
+}
+
+.btn-create-ticket-admin:hover {
+    background: linear-gradient(135deg, #5aafff 0%, #3a8add 50%, #2a6abb 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 35px rgba(74, 158, 255, 0.6), 0 0 60px rgba(74, 158, 255, 0.15);
+    border-color: rgba(74, 158, 255, 0.3);
+}
+
+.btn-create-ticket-admin:active {
+    transform: translateY(0px) scale(0.97);
+    box-shadow: 0 2px 10px rgba(74, 158, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.btn-create-ticket-admin .icon {
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+/* ============================================================
+   СТРЕЛКИ НАВИГАЦИИ
+   ============================================================ */
+
+.nav-arrow {
+    position: fixed;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9999;
+    padding: 0;
+}
+
+.nav-arrow:hover {
+    background: var(--accent);
+    color: var(--bg-primary);
+    border-color: var(--accent);
+    transform: scale(1.1);
+    box-shadow: 0 0 40px rgba(74, 158, 255, 0.4);
+}
+
+.nav-arrow:active {
+    transform: scale(0.9);
+}
+
+.nav-arrow svg {
+    width: 22px;
+    height: 22px;
+    transition: transform 0.2s ease;
+}
+
+.nav-arrow:hover svg {
+    transform: scale(1.1);
+}
+
+.nav-arrow-up {
+    top: 24px;
+    right: 24px;
+}
+
+.nav-arrow-down {
+    bottom: 24px;
+    right: 24px;
+}
+
+.nav-arrow.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.8);
+}
+
+/* ============================================================
    СКРОЛЛБАР
    ============================================================ */
 
@@ -2332,8 +2256,10 @@ body {
     .btn-find { width: 100%; text-align: center; }
     .find-result-footer { flex-direction: column; align-items: stretch; }
     .find-copy, .find-track { width: 100%; text-align: center; }
-    .device-cell { min-width: 100px; }
-    .device-tag { font-size: 10px; padding: 2px 6px; white-space: normal; word-break: break-all; }
+    .nav-arrow { width: 40px; height: 40px; }
+    .nav-arrow svg { width: 18px; height: 18px; }
+    .nav-arrow-up { top: 16px; right: 16px; }
+    .nav-arrow-down { bottom: 16px; right: 16px; }
 }
 
 @media (max-width: 480px) {
@@ -2348,455 +2274,34 @@ body {
     .task-actions { flex-direction: column; }
     .task-actions button { width: 100%; text-align: center; }
     .modal-buttons { flex-direction: column; }
-    .ticket-device-info { flex-direction: column; align-items: flex-start; gap: 4px; }
     .controls-bar .sort-wrapper { flex-direction: column; align-items: stretch; }
     .controls-bar .sort-wrapper select { width: 100%; }
     .track-card-header { flex-wrap: wrap; }
     .track-card-footer { flex-direction: column; }
     .track-copy, .track-refresh { width: 100%; }
-    .device-cell { min-width: 80px; }
-    .device-tag { font-size: 9px; padding: 2px 4px; }
+    .nav-arrow { width: 36px; height: 36px; }
+    .nav-arrow svg { width: 16px; height: 16px; }
+    .nav-arrow-up { top: 12px; right: 12px; }
+    .nav-arrow-down { bottom: 12px; right: 12px; }
 }
 
 /* ============================================================
-   СТРЕЛКИ НАВИГАЦИИ (ПО УГЛАМ)
+   ПЕЧАТЬ ОТЧЕТОВ
    ============================================================ */
 
-/* Общие стили для стрелок */
-.nav-arrow {
-    position: fixed;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: 2px solid var(--border-color);
-    background: var(--bg-card);
-    color: var(--text-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 9999;
-    padding: 0;
-}
-
-.nav-arrow:hover {
-    background: var(--accent);
-    color: var(--bg-primary);
-    border-color: var(--accent);
-    transform: scale(1.1);
-    box-shadow: 0 0 40px rgba(74, 158, 255, 0.4);
-}
-
-.nav-arrow:active {
-    transform: scale(0.9);
-}
-
-.nav-arrow svg {
-    width: 22px;
-    height: 22px;
-    transition: transform 0.2s ease;
-}
-
-.nav-arrow:hover svg {
-    transform: scale(1.1);
-}
-
-/* Стрелка вверх - правый верхний угол */
-.nav-arrow-up {
-    top: 24px;
-    right: 24px;
-}
-
-/* Стрелка вниз - правый нижний угол */
-.nav-arrow-down {
-    bottom: 24px;
-    right: 24px;
-}
-
-/* ============================================================
-   СТИЛИ ДЛЯ СВЕТЛОЙ ТЕМЫ
-   ============================================================ */
-
-[data-theme="light"] .nav-arrow {
-    background: rgba(255, 255, 255, 0.95);
-    border-color: #e2e8f0;
-    color: #4a5568;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-[data-theme="light"] .nav-arrow:hover {
-    background: var(--accent);
-    color: #ffffff;
-    border-color: var(--accent);
-    box-shadow: 0 0 40px rgba(74, 158, 255, 0.3);
-}
-
-/* ============================================================
-   СТИЛИ ДЛЯ ТЕМНОЙ ТЕМЫ
-   ============================================================ */
-
-[data-theme="dark"] .nav-arrow {
-    background: rgba(19, 29, 51, 0.95);
-    border-color: var(--border-color);
-    color: var(--text-secondary);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme="dark"] .nav-arrow:hover {
-    background: var(--accent);
-    color: var(--bg-primary);
-    border-color: var(--accent);
-    box-shadow: 0 0 40px rgba(74, 158, 255, 0.4);
-}
-
-/* ============================================================
-   СКРЫТИЕ СТРЕЛОК
-   ============================================================ */
-
-.nav-arrow.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: scale(0.8);
-}
-
-/* ============================================================
-   АНИМАЦИЯ ПОЯВЛЕНИЯ
-   ============================================================ */
-
-.nav-arrow-up {
-    animation: slideDown 0.4s ease;
-}
-
-.nav-arrow-down {
-    animation: slideUp 0.4s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ============================================================
-   АДАПТИВНОСТЬ
-   ============================================================ */
-
-@media (max-width: 768px) {
-    .nav-arrow {
-        width: 40px;
-        height: 40px;
-    }
-    
-    .nav-arrow svg {
-        width: 18px;
-        height: 18px;
-    }
-    
-    .nav-arrow-up {
-        top: 16px;
-        right: 16px;
-    }
-    
-    .nav-arrow-down {
-        bottom: 16px;
-        right: 16px;
-    }
-}
-
-@media (max-width: 480px) {
-    .nav-arrow {
-        width: 36px;
-        height: 36px;
-    }
-    
-    .nav-arrow svg {
-        width: 16px;
-        height: 16px;
-    }
-    
-    .nav-arrow-up {
-        top: 12px;
-        right: 12px;
-    }
-    
-    .nav-arrow-down {
-        bottom: 12px;
-        right: 12px;
-    }
-}
-
-/* ============================================================
-   КНОПКИ В ЭКРАНЕ "МОИ ЗАЯВКИ"
-   ============================================================ */
-
-.btn-logout-track {
-    padding: 10px 24px;
-    background: #fc8181;
-    color: #ffffff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: 0.2s;
-    font-family: 'Inter', sans-serif;
-}
-
-.btn-logout-track:hover {
-    background: #f56565;
-    transform: scale(1.02);
-    box-shadow: 0 0 30px rgba(245, 101, 101, 0.3);
-}
-
-.btn-back-home {
-    padding: 10px 24px;
-    background: #edf2f7;
-    color: #4a5568;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: 0.2s;
-    font-family: 'Inter', sans-serif;
-}
-
-.btn-back-home:hover {
-    background: #e2e8f0;
-    transform: scale(1.02);
-}
-
-/* Для темной темы */
-[data-theme="dark"] .btn-back-home {
-    background: var(--bg-hover);
-    color: var(--text-secondary);
-    border-color: var(--border-color);
-}
-
-[data-theme="dark"] .btn-back-home:hover {
-    background: var(--bg-card);
-}
-
-/* ============================================================
-   ТЕМНО-КРАСНЫЙ ГРАДИЕНТ НА ПАНЕЛИ АДМИНА
-   ============================================================ */
-
-/* Фон для экрана админки */
-#screen-admin {
-    background: linear-gradient(145deg, #1a0a0a 0%, #0d0a1a 40%, #1a0a0a 100%);
-    position: relative;
-    min-height: 100vh;
-}
-
-/* Эффект свечения сверху */
-#screen-admin::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 300px;
-    background: linear-gradient(180deg, 
-        rgba(180, 20, 30, 0.15) 0%,
-        rgba(180, 20, 30, 0.08) 40%,
-        rgba(180, 20, 30, 0.03) 70%,
-        transparent 100%
-    );
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* Эффект свечения по бокам */
-#screen-admin::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: 
-        radial-gradient(ellipse at 20% 0%, rgba(180, 20, 30, 0.06) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 0%, rgba(180, 20, 30, 0.06) 0%, transparent 60%),
-        radial-gradient(ellipse at 50% 100%, rgba(180, 20, 30, 0.04) 0%, transparent 40%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* Чтобы контент был поверх фона */
-#screen-admin > * {
-    position: relative;
-    z-index: 1;
-}
-
-/* ============================================================
-   ЗАГОЛОВОК АДМИНКИ С ПОДСВЕТКОЙ
-   ============================================================ */
-
-#screen-admin .admin-header h1 {
-    text-shadow: 
-        0 0 40px rgba(180, 20, 30, 0.2),
-        0 0 80px rgba(180, 20, 30, 0.1);
-}
-
-/* ============================================================
-   АКТИВНАЯ КНОПКА С КРАСНЫМ ОТТЕНКОМ
-   ============================================================ */
-
-#screen-admin .nav-btn.active {
-    color: #ff4466;
-    border-bottom-color: #ff4466;
-    text-shadow: 0 0 30px rgba(255, 68, 102, 0.3);
-}
-
-/* ============================================================
-   КАРТОЧКИ С ЛЕГКИМ КРАСНЫМ ОТТЕНКОМ
-   ============================================================ */
-
-#screen-admin .ticket-card {
-    background: linear-gradient(145deg, 
-        rgba(19, 29, 51, 0.9),
-        rgba(26, 10, 10, 0.8)
-    );
-    border-color: rgba(180, 20, 30, 0.2);
-    backdrop-filter: blur(5px);
-}
-
-#screen-admin .ticket-card:hover {
-    border-color: rgba(180, 20, 30, 0.4);
-    box-shadow: 0 0 40px rgba(180, 20, 30, 0.1);
-}
-
-/* ============================================================
-   АНИМАЦИЯ МЕРЦАНИЯ СВЕЧЕНИЯ
-   ============================================================ */
-
-#screen-admin::before {
-    animation: glowPulse 4s ease-in-out infinite;
-}
-
-@keyframes glowPulse {
-    0% { opacity: 0.6; }
-    50% { opacity: 1; }
-    100% { opacity: 0.6; }
-}
-
-/* ============================================================
-   ДОПОЛНИТЕЛЬНЫЙ ЭФФЕКТ - ПЫЛЬЦА
-   ============================================================ */
-
-#screen-admin .admin-nav {
-    border-bottom-color: rgba(180, 20, 30, 0.15);
-}
-
-#screen-admin .controls-bar {
-    background: rgba(19, 29, 51, 0.7);
-    border-color: rgba(180, 20, 30, 0.15);
-    backdrop-filter: blur(10px);
-}
-/* ============================================================
-   КНОПКА СОЗДАНИЯ ЗАЯВКИ В АДМИНКЕ (СИНЯЯ)
-   ============================================================ */
-
-.btn-create-ticket-admin {
-    padding: 10px 24px;
-    background: linear-gradient(135deg, #4a9eff 0%, #2a7acc 50%, #1a5aaa 100%);
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    font-family: 'Inter', sans-serif;
-    box-shadow: 
-        0 4px 20px rgba(74, 158, 255, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    position: relative;
-    overflow: hidden;
-    letter-spacing: 0.3px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(74, 158, 255, 0.15);
-}
-
-/* Эффект при наведении */
-.btn-create-ticket-admin:hover {
-    background: linear-gradient(135deg, #5aafff 0%, #3a8add 50%, #2a6abb 100%);
-    transform: translateY(-2px);
-    box-shadow: 
-        0 8px 35px rgba(74, 158, 255, 0.6),
-        0 0 60px rgba(74, 158, 255, 0.15);
-    border-color: rgba(74, 158, 255, 0.3);
-}
-
-.btn-create-ticket-admin:active {
-    transform: translateY(0px) scale(0.97);
-    box-shadow: 
-        0 2px 10px rgba(74, 158, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-/* Иконка внутри кнопки */
-.btn-create-ticket-admin .icon {
-    display: inline-block;
-    margin-right: 8px;
-    font-size: 16px;
-}
-
-/* ============================================================
-   ТОЛЬКО ДЛЯ ТЕМНОЙ ТЕМЫ
-   ============================================================ */
-
-[data-theme="dark"] .btn-create-ticket-admin {
-    background: linear-gradient(135deg, #4a9eff 0%, #2a7acc 50%, #1a5aaa 100%);
-    box-shadow: 
-        0 4px 20px rgba(74, 158, 255, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(74, 158, 255, 0.15);
-}
-
-[data-theme="dark"] .btn-create-ticket-admin:hover {
-    background: linear-gradient(135deg, #5aafff 0%, #3a8add 50%, #2a6abb 100%);
-    box-shadow: 
-        0 8px 35px rgba(74, 158, 255, 0.6),
-        0 0 60px rgba(74, 158, 255, 0.15);
-    border-color: rgba(74, 158, 255, 0.3);
-}
-
-[data-theme="dark"] .btn-create-ticket-admin:active {
-    box-shadow: 
-        0 2px 10px rgba(74, 158, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-/* ============================================================
-   ДЛЯ СВЕТЛОЙ ТЕМЫ
-   ============================================================ */
-
-[data-theme="light"] .btn-create-ticket-admin {
-    background: linear-gradient(135deg, #4a9eff 0%, #2a7acc 100%);
-    box-shadow: 0 4px 20px rgba(74, 158, 255, 0.3);
-    border: 1px solid rgba(74, 158, 255, 0.15);
-}
-
-[data-theme="light"] .btn-create-ticket-admin:hover {
-    background: linear-gradient(135deg, #5aafff 0%, #3a8add 100%);
-    box-shadow: 0 8px 35px rgba(74, 158, 255, 0.4);
+@media print {
+    body * { visibility: hidden !important; }
+    #screen-report-view, #screen-report-view * { visibility: visible !important; }
+    #screen-report-view { position: fixed !important; left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; background: #ffffff !important; padding: 0 !important; margin: 0 !important; display: block !important; overflow: visible !important; }
+    #screen-report-view > div:first-child { display: none !important; }
+    #report-view-content { padding: 8px !important; max-width: 100% !important; width: 100% !important; margin: 0 !important; }
+    #report-view-content > div { border: none !important; border-radius: 0 !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; background: #ffffff !important; }
+    #report-view-content > div > div:first-child { display: none !important; }
+    #report-view-content > div > p { display: none !important; }
+    #report-view-content table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; font-size: 8px !important; margin-top: 0 !important; }
+    #report-view-content table th, #report-view-content table td { padding: 3px 5px !important; border: 1px solid #000 !important; text-align: left !important; vertical-align: middle !important; font-size: 8px !important; word-wrap: break-word !important; max-width: 120px !important; }
+    #report-view-content table th { background: #f0f0f0 !important; font-weight: 700 !important; font-size: 8px !important; text-transform: uppercase !important; }
+    #report-view-content table td:first-child { text-align: center !important; min-width: 25px !important; width: 30px !important; }
+    button, .btn-*, .report-toolbar, .report-actions { display: none !important; }
+    #report-view-title { display: none !important; }
 }

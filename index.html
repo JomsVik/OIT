@@ -9,55 +9,66 @@
 <body>
 
     <!-- ============================================================
-    СТРЕЛКИ НАВИГАЦИИ (ПО УГЛАМ)
+    СТРЕЛКИ НАВИГАЦИИ
     ============================================================ -->
-    <!-- Стрелка вверх - правый верхний угол -->
     <button class="nav-arrow nav-arrow-up" onclick="app.scrollUp()" title="Вверх">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="18 15 12 9 6 15"></polyline>
         </svg>
     </button>
-    
-    <!-- Стрелка вниз - правый нижний угол -->
     <button class="nav-arrow nav-arrow-down" onclick="app.scrollDown()" title="Вниз">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
     </button>
 
     <!-- ============================================================
-    ЭКРАН ВХОДА
+    ЭКРАН ВХОДА (без лишних кнопок)
     ============================================================ -->
     <div id="screen-login" class="screen active">
         <div class="login-container">
             <h1>IT<span>Портал</span></h1>
-            
-            <!-- Скрытое поле для входа (появляется по S+K) -->
-            <div id="admin-login-section" style="display:none; margin-bottom:16px;">
-                <div class="login-row">
-                    <input type="text" id="admin-login-input" placeholder="Введите ID">
-                    <button class="btn-enter" onclick="app.login()">→</button>
-                </div>
+
+            <div class="login-tabs">
+                <button class="login-tab active" data-tab="user" onclick="app.switchLoginTab('user')">👤 Пользователь</button>
+                <button class="login-tab" data-tab="admin" onclick="app.switchLoginTab('admin')">🔑 Администратор</button>
             </div>
-            
-            <button class="btn-create-ticket" onclick="app.showScreen('screen-ticket')">📝 Оставить заявку</button>
-            <button class="btn-track-tickets" onclick="app.showScreen('screen-track-tickets'); app.loadTrackedTickets()" style="margin-top:8px;width:100%;padding:12px;background:transparent;border:1px solid var(--border-color);border-radius:8px;color:var(--text-secondary);cursor:pointer;font-weight:600;">📋 Мои заявки</button>
-            <button class="btn-find-ticket" onclick="app.showScreen('screen-find-ticket')" style="margin-top:8px;width:100%;padding:12px;background:var(--accent);border:1px solid var(--accent);border-radius:8px;color:#ffffff;cursor:pointer;font-weight:700;transition:0.2s;font-family:'Inter',sans-serif;">🔍 Найти заявку по номеру</button>
-            
+
+            <div id="login-user-form">
+                <input type="text" id="user-login-input" placeholder="Логин">
+                <input type="password" id="user-pass-input" placeholder="Пароль">
+                <button class="btn-enter" onclick="app.userLogin()">Войти</button>
+            </div>
+
+            <div id="login-admin-form" style="display:none;">
+                <input type="text" id="admin-login-input" placeholder="Логин">
+                <input type="password" id="admin-pass-input" placeholder="Пароль">
+                <button class="btn-enter" onclick="app.adminLogin()">Войти</button>
+            </div>
+
+            <div class="login-hint">🔑 S+K — вход администратора</div>
         </div>
+        <div id="ticket-footer" class="phones-footer"></div>
     </div>
 
     <!-- ============================================================
-    МОДАЛЬНОЕ ОКНО ДЛЯ КОММЕНТАРИЕВ
+    МОДАЛЬНЫЕ ОКНА
     ============================================================ -->
     <div id="comment-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="app.closeCommentModal()">&times;</span>
-            <h2>Добавить комментарий</h2>
+            <h2>💬 Комментарий (Админ)</h2>
             <input type="hidden" id="comment-ticket-id">
             <div class="form-group">
                 <label>Текст</label>
-                <textarea id="comment-textarea" rows="4" placeholder="Введите комментарий..." required></textarea>
+                <textarea id="comment-textarea" rows="4" placeholder="Введите комментарий..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Видимость</label>
+                <select id="comment-visibility">
+                    <option value="true">🌐 Публичный</option>
+                    <option value="false">🔒 Приватный</option>
+                </select>
             </div>
             <div class="modal-buttons">
                 <button class="btn-save" onclick="app.submitComment()">Отправить</button>
@@ -66,42 +77,135 @@
         </div>
     </div>
 
-    <!-- ============================================================
-    МОДАЛЬНОЕ ОКНО ДЛЯ ЗАДАЧ
-    ============================================================ -->
-    <div id="task-modal" class="modal">
+    <div id="user-comment-modal" class="modal">
         <div class="modal-content">
-            <span class="close-modal" onclick="app.closeTaskModal()">&times;</span>
-            <h2 id="modal-title">Создать задачу</h2>
-            <form id="task-form" onsubmit="event.preventDefault()">
-                <!-- Поля заполняются динамически -->
-            </form>
+            <span class="close-modal" onclick="app.closeUserCommentModal()">&times;</span>
+            <h2>💬 Комментарий</h2>
+            <input type="hidden" id="user-comment-ticket-id">
+            <div class="form-group">
+                <label>Ваше имя</label>
+                <input type="text" id="user-comment-name" placeholder="Ваше имя">
+            </div>
+            <div class="form-group">
+                <label>Текст</label>
+                <textarea id="user-comment-textarea" rows="4" placeholder="Введите комментарий..."></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-save" onclick="app.submitUserComment()">Отправить</button>
+                <button class="btn-cancel" onclick="app.closeUserCommentModal()">Отмена</button>
+            </div>
         </div>
     </div>
 
-    <!-- ============================================================
-    МОДАЛЬНОЕ ОКНО ДЛЯ ИНВЕНТАРЯ
-    ============================================================ -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="app.closeTaskModal()">&times;</span>
+            <h2 id="modal-title">📋 Создать задачу</h2>
+            <form id="task-form" onsubmit="event.preventDefault()"></form>
+        </div>
+    </div>
+
     <div id="inventory-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="app.closeInventoryModal()">&times;</span>
             <h2 id="modal-title">Добавить запись</h2>
-            <form id="inventory-form" onsubmit="app.saveInventoryItem(event)">
-                <!-- Поля и кнопки добавляются динамически -->
-            </form>
+            <form id="inventory-form" onsubmit="app.saveInventoryItem(event)"></form>
+        </div>
+    </div>
+
+    <div id="report-type-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:420px;">
+            <h2>📊 Выберите тип отчёта</h2>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <button onclick="app.generateReport('tickets')" style="padding:16px 24px;background:#4a9eff;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;text-align:left;">📋 Архив заявок</button>
+                <button onclick="app.generateReport('tasks')" style="padding:16px 24px;background:#4a9eff;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;text-align:left;">✅ Архив задач</button>
+                <button onclick="app.generateReport('stats')" style="padding:16px 24px;background:#33dd88;color:#1a202c;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;text-align:left;">📊 Статистика</button>
+                <button onclick="app.closeReportTypeModal()" style="padding:12px 24px;background:transparent;color:#4a5568;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">❌ Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-user-modal" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="close-modal" onclick="app.closeEditUserModal()">&times;</span>
+            <h2 id="edit-user-title">✏️ Редактировать пользователя</h2>
+            <input type="hidden" id="edit-user-id">
+            <div class="form-group">
+                <label>Логин</label>
+                <input type="text" id="edit-user-login" disabled>
+            </div>
+            <div class="form-group">
+                <label>ФИО</label>
+                <input type="text" id="edit-user-name">
+            </div>
+            <div class="form-group">
+                <label>Отдел</label>
+                <input type="text" id="edit-user-department">
+            </div>
+            <div class="form-group">
+                <label>Должность</label>
+                <input type="text" id="edit-user-position">
+            </div>
+            <div class="form-group">
+                <label>Новый пароль (оставьте пустым, чтобы не менять)</label>
+                <input type="text" id="edit-user-password" placeholder="Новый пароль">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-save" onclick="app.saveEditUser()">💾 Сохранить</button>
+                <button class="btn-cancel" onclick="app.closeEditUserModal()">❌ Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-admin-modal" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="close-modal" onclick="app.closeEditAdminModal()">&times;</span>
+            <h2 id="edit-admin-title">✏️ Редактировать администратора</h2>
+            <input type="hidden" id="edit-admin-id">
+            <div class="form-group">
+                <label>Логин</label>
+                <input type="text" id="edit-admin-login" disabled>
+            </div>
+            <div class="form-group">
+                <label>ФИО</label>
+                <input type="text" id="edit-admin-name">
+            </div>
+            <div class="form-group">
+                <label>Роль</label>
+                <select id="edit-admin-role">
+                    <option value="admin">Администратор</option>
+                    <option value="super_admin">Главный администратор</option>
+                    <option value="director">Директор</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Телефон</label>
+                <input type="text" id="edit-admin-phone">
+            </div>
+            <div class="form-group">
+                <label>Цвет плашки</label>
+                <input type="color" id="edit-admin-color" value="#4a9eff">
+            </div>
+            <div class="form-group">
+                <label>Новый пароль (оставьте пустым, чтобы не менять)</label>
+                <input type="text" id="edit-admin-password" placeholder="Новый пароль">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-save" onclick="app.saveEditAdmin()">💾 Сохранить</button>
+                <button class="btn-cancel" onclick="app.closeEditAdminModal()">❌ Отмена</button>
+            </div>
         </div>
     </div>
 
     <!-- ============================================================
-    ЭКРАН ФОРМЫ ЗАЯВКИ (СВЕТЛАЯ ТЕМА)
+    ЭКРАН ФОРМЫ ЗАЯВКИ (без поля ФИО)
     ============================================================ -->
     <div id="screen-ticket" class="screen">
         <form id="ticket-form" onsubmit="app.submitTicket(event)">
             <h2>Новая заявка</h2>
-            <input type="text" name="employee" placeholder="ФИО сотрудника" required>
             <input type="text" name="location" placeholder="Кабинет" required>
             <textarea name="problem" rows="3" placeholder="Описание проблемы" required></textarea>
-            <textarea name="comment" rows="2" placeholder="Комментарий (необязательно)"></textarea>
+            <textarea name="comment" rows="2" placeholder="Комментарий"></textarea>
             <label>Срочность</label>
             <select name="urgency" required>
                 <option value="Низкая">Низкая</option>
@@ -110,62 +214,74 @@
             </select>
             <button type="submit" class="btn-round">Отправить</button>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:10px;">
-                <button type="button" class="back-link" onclick="app.showScreen('screen-login')">← Назад</button>
-                <button type="button" class="back-link" onclick="app.showScreen('screen-track-tickets'); app.loadTrackedTickets()">📋 Мои заявки</button>
+                <button type="button" class="back-link" onclick="app.showScreen('screen-track-tickets')">📋 Мои заявки</button>
+                <button type="button" class="back-link" onclick="app.logout()">🚪 Выйти</button>
             </div>
         </form>
+        <div id="ticket-footer-form" class="phones-footer"></div>
     </div>
 
     <!-- ============================================================
-    ЭКРАН ОТСЛЕЖИВАНИЯ ЗАЯВОК (МОИ ЗАЯВКИ - СВЕТЛАЯ ТЕМА)
+    ЭКРАН МОИХ ЗАЯВОК
     ============================================================ -->
-<div id="screen-track-tickets" class="screen" data-theme="light">
-    <div class="track-container" style="background:#ffffff;padding:24px;border-radius:12px;border:1px solid #e2e8f0;max-width:900px;width:100%;margin:0 auto;">
-        <!-- ЗАГОЛОВОК И КНОПКИ ТОЛЬКО ЗДЕСЬ (ОДИН РАЗ) -->
-        <div class="track-header">
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <button class="btn-logout-track" onclick="app.logoutFromTracks()" style="padding:10px 24px;background:#fc8181;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;transition:0.2s;font-family:'Inter',sans-serif;">🚪 Выйти</button>
+    <div id="screen-track-tickets" class="screen" data-theme="light">
+        <div class="track-container">
+            <div class="track-header">
+                <h2>📋 Мои заявки</h2>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn-create-ticket" onclick="app.showScreen('screen-ticket')">➕ Новая</button>
+                    <button class="btn-logout-track" onclick="app.logout()">🚪 Выйти</button>
+                </div>
+            </div>
+            <div id="screen-track-tickets-content">
+                <p style="text-align:center;color:#718096;padding:40px;">Загрузка...</p>
             </div>
         </div>
-        <!-- КОНТЕЙНЕР ДЛЯ ЗАЯВОК (БЕЗ ЗАГОЛОВКА) -->
-        <div id="screen-track-tickets-content">
-            <p style="text-align:center;color:#718096;padding:40px;">Загрузка...</p>
-        </div>
+        <div id="track-footer" class="phones-footer"></div>
     </div>
-</div>
 
     <!-- ============================================================
-    ЭКРАН ПОИСКА ЗАЯВКИ ПО ТРЕК-НОМЕРУ (СВЕТЛАЯ ТЕМА)
+    ЭКРАН ПОИСКА
     ============================================================ -->
     <div id="screen-find-ticket" class="screen" data-theme="light">
-    <div class="find-container" style="background:#ffffff;padding:32px;border-radius:12px;border:1px solid #e2e8f0;max-width:700px;width:100%;margin:0 auto;">
-        <div class="find-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-            <h2 style="color:#1a202c;font-size:24px;font-weight:700;">🔍 Найти заявку</h2>
-            <button class="btn-back" onclick="app.showScreen('screen-login')" style="padding:8px 20px;background:transparent;border:1px solid #e2e8f0;border-radius:6px;color:#4a5568;cursor:pointer;font-weight:600;transition:0.2s;font-family:'Inter',sans-serif;">← Назад</button>
-        </div>
-        
-        <div class="find-form" style="display:flex;gap:10px;margin-bottom:24px;">
-            <input type="text" id="find-ticket-input" placeholder="Введите номер (2 буквы + 2 цифры, например: AB12)" 
-                   onkeydown="if(event.key==='Enter') app.findTicketByToken()"
-                   style="flex:1;padding:14px 18px;background:#f7fafc;border:2px solid #e2e8f0;border-radius:8px;font-size:16px;color:#1a202c;outline:none;transition:0.2s;font-family:'Inter',sans-serif;text-transform:uppercase;"
-                   maxlength="4">
-            <button class="btn-find" onclick="app.findTicketByToken()" style="padding:14px 32px;background:#4a9eff;color:#ffffff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;transition:0.2s;font-family:'Inter',sans-serif;white-space:nowrap;">🔍 Найти</button>
-        </div>
-            
-            <div id="find-result">
-                <!-- Сюда будет выводиться результат поиска -->
+        <div class="find-container">
+            <div class="find-header">
+                <h2>🔍 Найти заявку</h2>
+                <button class="btn-back" onclick="app.showScreen('screen-track-tickets')">← Назад</button>
             </div>
+            <div class="find-form">
+                <input type="text" id="find-ticket-input" placeholder="Введите номер заявки" onkeydown="if(event.key==='Enter') app.findTicketByToken()">
+                <button class="btn-find" onclick="app.findTicketByToken()">🔍 Найти</button>
+            </div>
+            <div id="find-result"></div>
         </div>
+        <div id="find-footer" class="phones-footer"></div>
     </div>
 
-   <!-- ============================================================
-    ЭКРАН АДМИНКИ (ТЕМНАЯ ТЕМА)
+    <!-- ============================================================
+    ЭКРАН ПРОСМОТРА ОТЧЕТА
+    ============================================================ -->
+    <div id="screen-report-view" class="screen" data-theme="light" style="display:none;padding:0;background:#f0f4f8;min-height:100vh;">
+        <div style="background:#fff;padding:16px 32px;border-bottom:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:100;">
+            <h2 id="report-view-title" style="font-size:20px;font-weight:700;color:#1a202c;">📊 Отчет</h2>
+            <div style="display:flex;gap:10px;">
+                <button onclick="app.printReportOnly()" style="padding:10px 28px;background:#4a9eff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:15px;">🖨️ Печать</button>
+                <button onclick="app.closeReportView()" style="padding:10px 28px;background:#fc8181;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:15px;">✕ Закрыть</button>
+            </div>
+        </div>
+        <div id="report-view-content" style="padding:32px;max-width:1400px;width:100%;margin:0 auto;"></div>
+    </div>
+
+    <!-- ============================================================
+    ЭКРАН АДМИНКИ
     ============================================================ -->
     <div id="screen-admin" class="screen">
         <div class="admin-header">
             <h1>Панель администратора</h1>
-            <div style="display:flex;gap:10px;align-items:center;">
-                <button class="btn-create-ticket-admin" onclick="app.fromAdmin = true; app.showScreen('screen-ticket')">📝 Создать заявку</button>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button class="btn-create-ticket-admin" onclick="app.showScreen('screen-ticket')">📝 Заявка</button>
+                <button class="btn-refresh" onclick="app.refreshCurrentTab()">🔄 Обновить</button>
+                <button class="btn-auto-refresh" onclick="app.toggleAutoRefresh()" id="btn-auto-refresh">🔄 Авто (вкл)</button>
                 <div id="admin-role-indicator" class="admin-role">Администратор</div>
             </div>
         </div>
@@ -175,14 +291,48 @@
             <button class="nav-btn" data-tab="archived" onclick="app.switchTab('archived')">Архив</button>
             <button class="nav-btn" data-tab="tasks" onclick="app.switchTab('tasks')">Задачи</button>
             <button class="nav-btn" data-tab="tasks-archive" onclick="app.switchTab('tasks-archive')">Архив задач</button>
-            <button class="nav-btn" data-tab="ip-stats" onclick="app.switchTab('ip-stats')">IP</button>
             <button class="nav-btn" data-tab="inventory" onclick="app.switchTab('inventory')">Инвентарь</button>
+            <button class="nav-btn" data-tab="reports" onclick="app.switchTab('reports')">📊 Отчеты</button>
+            <button class="nav-btn" data-tab="users" onclick="app.switchTab('users')">👥 Пользователи</button>
+            <button class="nav-btn" data-tab="admins" onclick="app.switchTab('admins')">👑 Администраторы</button>
             <button class="nav-btn logout" onclick="app.logout()">Выход</button>
         </div>
 
-        <div id="admin-content">
-            <!-- Сюда грузятся заявки, задачи или инвентарь -->
+        <div id="admin-content"></div>
+
+        <!-- Контейнеры -->
+        <div id="tickets-container" style="display:none;width:100%;max-width:1400px;"></div>
+        <div id="archived-container" style="display:none;width:100%;max-width:1400px;"></div>
+        <div id="tasks-container" style="display:none;width:100%;max-width:1400px;"></div>
+        <div id="tasks-archive-container" style="display:none;width:100%;max-width:1400px;"></div>
+        <div id="ip-container" style="display:none;width:100%;max-width:1400px;"></div>
+        <div id="inventory-container" style="display:none;width:100%;max-width:1400px;"></div>
+
+        <div id="reports-container" style="display:none;width:100%;max-width:1400px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+                <h2 style="color:#fff;font-size:24px;font-weight:700;">📊 Отчеты</h2>
+                <button class="btn-add-inventory" onclick="app.createNewReport()">➕ Создать</button>
+            </div>
+            <div id="reports-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;"></div>
         </div>
+
+        <div id="users-container" style="display:none;width:100%;max-width:1400px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+                <h2 style="color:#fff;font-size:24px;font-weight:700;">👥 Пользователи</h2>
+                <button class="btn-add-inventory" onclick="app.showCreateUserModal()">➕ Создать</button>
+            </div>
+            <div id="users-grid"></div>
+        </div>
+
+        <div id="admins-container" style="display:none;width:100%;max-width:1400px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+                <h2 style="color:#fff;font-size:24px;font-weight:700;">👑 Администраторы</h2>
+                <button class="btn-add-inventory" onclick="app.showCreateAdminModal()">➕ Создать</button>
+            </div>
+            <div id="admins-grid"></div>
+        </div>
+
+        <div id="admin-footer" class="phones-footer"></div>
     </div>
 
     <script src="app.js"></script>
