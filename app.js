@@ -21,10 +21,6 @@ const app = {
     autoRefreshInterval: null,
     isAutoRefreshEnabled: true,
 
-    // ============================================================
-    // ВХОД
-    // ============================================================
-
     switchLoginTab(tab) {
         document.querySelectorAll('.login-tab').forEach(t => {
             t.classList.remove('active');
@@ -65,7 +61,7 @@ const app = {
         } catch (err) { alert('Ошибка: ' + err.message); }
     },
 
-    async adminLogin() {
+       async adminLogin() {
         const login = document.getElementById('admin-login-input').value.trim();
         const password = document.getElementById('admin-pass-input').value.trim();
         if (!login || !password) { alert('Введите логин и пароль'); return; }
@@ -98,10 +94,8 @@ const app = {
                 }
                 roleDisplay.textContent = roleText;
 
-                // Показываем вкладки только для директора
                 const isDirector = data.role === 'director';
                 document.querySelectorAll('.nav-btn[data-tab="users"]').forEach(el => el.style.display = isDirector ? 'inline-block' : 'none');
-                document.querySelectorAll('.nav-btn[data-tab="admins"]').forEach(el => el.style.display = isDirector ? 'inline-block' : 'none');
 
                 this.showScreen('screen-admin');
                 this.switchTab('active');
@@ -115,18 +109,48 @@ const app = {
     logout() {
         this.currentUser = null;
         this.currentUserType = null;
-        this.showScreen('screen-login');
         this.stopAutoRefresh();
+
+        document.querySelectorAll('.modal').forEach(m => {
+            m.style.display = 'none';
+            m.classList.remove('active');
+        });
+
+        document.querySelectorAll('.screen').forEach(s => {
+            s.classList.remove('active');
+            s.style.display = 'none';
+        });
+
+        document.documentElement.setAttribute('data-theme', 'light');
+
+        const loginScreen = document.getElementById('screen-login');
+        if (loginScreen) {
+            loginScreen.classList.add('active');
+            loginScreen.style.display = 'flex';
+        }
+
+        const userLogin = document.getElementById('user-login-input');
+        const userPass = document.getElementById('user-pass-input');
+        const adminLogin = document.getElementById('admin-login-input');
+        const adminPass = document.getElementById('admin-pass-input');
+        if (userLogin) userLogin.value = '';
+        if (userPass) userPass.value = '';
+        if (adminLogin) adminLogin.value = '';
+        if (adminPass) adminPass.value = '';
+
+        this.switchLoginTab('user');
     },
 
-    // ============================================================
-    // НАВИГАЦИЯ
-    // ============================================================
-
     showScreen(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.screen').forEach(s => {
+            s.classList.remove('active');
+            s.style.display = 'none';
+        });
         const screen = document.getElementById(id);
-        if (screen) screen.classList.add('active');
+        if (screen) {
+            screen.classList.add('active');
+            screen.style.display = 'flex';
+        }
 
         if (id === 'screen-ticket' || id === 'screen-login' || id === 'screen-track-tickets' || id === 'screen-find-ticket') {
             document.documentElement.setAttribute('data-theme', 'light');
@@ -141,10 +165,6 @@ const app = {
         if (id === 'screen-track-tickets') this.loadTrackedTickets();
     },
 
-    // ============================================================
-    // АВТООБНОВЛЕНИЕ
-    // ============================================================
-
     startAutoRefresh() {
         if (this.autoRefreshInterval) clearInterval(this.autoRefreshInterval);
         this.autoRefreshInterval = setInterval(() => {
@@ -154,7 +174,7 @@ const app = {
             if (document.querySelector('.modal.active')) return;
 
             const activeTab = document.querySelector('.nav-btn.active[data-tab]');
-            if (activeTab && !['reports', 'ip-stats', 'users', 'admins'].includes(activeTab.dataset.tab)) {
+            if (activeTab && !['reports', 'users', 'admins', 'switches'].includes(activeTab.dataset.tab)) {
                 const scrollY = window.scrollY;
                 this.switchTab(activeTab.dataset.tab);
                 setTimeout(() => window.scrollTo(0, scrollY), 50);
@@ -171,10 +191,16 @@ const app = {
         this.isAutoRefreshEnabled = !this.isAutoRefreshEnabled;
         if (this.isAutoRefreshEnabled) {
             this.startAutoRefresh();
-            if (btn) { btn.textContent = '🔄 Авто (вкл)'; btn.style.background = '#4a9eff'; btn.style.color = '#fff'; }
+            if (btn) { 
+                btn.textContent = '🔄 Авто (вкл)'; 
+                btn.classList.remove('disabled');
+            }
         } else {
             this.stopAutoRefresh();
-            if (btn) { btn.textContent = '⏸️ Авто (выкл)'; btn.style.background = '#fc8181'; btn.style.color = '#fff'; }
+            if (btn) { 
+                btn.textContent = '⏸️ Авто (выкл)'; 
+                btn.classList.add('disabled');
+            }
         }
     },
 
@@ -187,16 +213,12 @@ const app = {
         }
     },
 
-    // ============================================================
-    // ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
-    // ============================================================
-
-    switchTab(tab) {
+       switchTab(tab) {
         document.querySelectorAll('.nav-btn[data-tab]').forEach(b => b.classList.remove('active'));
         const targetBtn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
         if (targetBtn) targetBtn.classList.add('active');
 
-        const containers = ['tickets-container', 'archived-container', 'tasks-container', 'tasks-archive-container', 'ip-container', 'inventory-container', 'reports-container', 'users-container', 'admins-container'];
+        const containers = ['tickets-container', 'archived-container', 'tasks-container', 'tasks-archive-container', 'inventory-container', 'switches-container', 'reports-container', 'users-container'];
         containers.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 
         const map = {
@@ -204,18 +226,17 @@ const app = {
             'archived': () => { document.getElementById('archived-container').style.display = 'block'; this.loadTickets(true); },
             'tasks': () => { document.getElementById('tasks-container').style.display = 'block'; this.loadTasks(false); },
             'tasks-archive': () => { document.getElementById('tasks-archive-container').style.display = 'block'; this.loadTasks(true); },
-            'ip-stats': () => { document.getElementById('ip-container').style.display = 'block'; this.loadIPStats(); },
             'inventory': () => { document.getElementById('inventory-container').style.display = 'block'; this.loadInventory(); },
+            'switches': () => { document.getElementById('switches-container').style.display = 'block'; this.loadSwitches(); },
             'reports': () => { document.getElementById('reports-container').style.display = 'block'; this.loadReports(); },
-            'users': () => { document.getElementById('users-container').style.display = 'block'; this.loadUsers(); },
-            'admins': () => { document.getElementById('admins-container').style.display = 'block'; this.loadAdminsList(); }
+            'users': () => { 
+                document.getElementById('users-container').style.display = 'block'; 
+                this.loadUsers(); 
+                this.loadAdminsList(); 
+            }
         };
         if (map[tab]) map[tab]();
     },
-
-    // ============================================================
-    // ВСПОМОГАТЕЛЬНЫЕ
-    // ============================================================
 
     getTicketTimeClass(createdAt) {
         const now = new Date();
@@ -236,26 +257,6 @@ const app = {
             return `👤 Пользователь ${comment.user_name || 'Без имени'}`;
         }
         return '👤 Неизвестный';
-    },
-
-    formatUserAgent(ua) {
-        if (!ua) return 'Неизвестно';
-        let result = [];
-        if (ua.includes('Windows NT 10.0')) result.push('Windows 10/11');
-        else if (ua.includes('Windows NT 6.1')) result.push('Windows 7');
-        else if (ua.includes('Mac OS X')) result.push('macOS');
-        else if (ua.includes('Linux') && !ua.includes('Android')) result.push('Linux');
-        else if (ua.includes('Android')) result.push('Android');
-        else if (ua.includes('iPhone') || ua.includes('iPad')) result.push('iOS');
-        else result.push('Unknown OS');
-        if (ua.includes('Chrome') && !ua.includes('Edg')) result.push('Chrome');
-        else if (ua.includes('Firefox')) result.push('Firefox');
-        else if (ua.includes('Safari') && !ua.includes('Chrome')) result.push('Safari');
-        else if (ua.includes('Edg')) result.push('Edge');
-        else result.push('Unknown Browser');
-        if (ua.includes('Mobile')) result.push('📱');
-        else result.push('💻');
-        return result.join(' ');
     },
 
     sortData(data, field, order) {
@@ -354,7 +355,7 @@ const app = {
             const sorted = this.sortData(filtered, sort.field, sort.order);
 
             if (!sorted.length) {
-                container.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:40px;">${searchQuery ? 'По вашему запросу ничего не найдено' : (archived ? 'Нет выполненных заявок' : 'Нет активных заявок')}</p>`;
+                container.innerHTML = `<p class="empty-state">${searchQuery ? 'По вашему запросу ничего не найдено' : (archived ? 'Нет выполненных заявок' : 'Нет активных заявок')}</p>`;
                 return;
             }
 
@@ -372,32 +373,20 @@ const app = {
                                 <summary>💬 Комментарии (${comments.length})</summary>
                                 ${comments.map(c => {
                                     const isPrivate = c.is_public === false;
-                                    let borderColor = '#4a9eff', bgColor = 'rgba(74,158,255,0.05)', icon = '🌐', badge = 'Публичный';
+                                    let borderColor = '#4a9eff', icon = '🌐', badge = 'Публичный';
                                     if (c.admin_id) {
-                                        if (isPrivate) { borderColor = '#ffaa33'; bgColor = 'rgba(255,170,51,0.1)'; icon = '🔒'; badge = 'Приватный'; }
+                                        if (isPrivate) { borderColor = '#ffaa33'; icon = '🔒'; badge = 'Приватный'; }
                                     } else if (c.user_id) {
-                                        borderColor = '#33dd88'; bgColor = 'rgba(51,221,136,0.05)'; icon = '👤'; badge = 'Пользователь';
+                                        borderColor = '#33dd88'; icon = '👤'; badge = 'Пользователь';
                                     }
                                     return `
-                                        <div style="border-left:4px solid ${borderColor};background:${bgColor};padding:10px 14px;border-radius:6px;margin:6px 0;">
-                                            <div style="font-size:13px;">${icon} ${c.comment_text} <span style="font-size:9px;padding:1px 10px;border-radius:12px;background:${borderColor}22;color:${borderColor};border:1px solid ${borderColor}55;">${badge}</span></div>
-                                            <div style="font-size:11px;color:var(--text-muted);">${this.formatCommentAuthor(c)} • ${new Date(c.created_at).toLocaleString('ru-RU')}</div>
+                                        <div class="comment-item" style="border-left-color: ${borderColor};">
+                                            <div class="comment-text">${icon} ${c.comment_text} <span class="comment-badge" style="border-color:${borderColor};color:${borderColor};">${badge}</span></div>
+                                            <div class="comment-meta">${this.formatCommentAuthor(c)} • ${new Date(c.created_at).toLocaleString('ru-RU')}</div>
                                         </div>
                                     `;
                                 }).join('')}
                             </details>
-                        </div>
-                    `;
-                }
-
-                let deviceHtml = '';
-                if (t.ip_address || t.user_agent) {
-                    const formattedUA = this.formatUserAgent(t.user_agent);
-                    const isLocalhost = t.ip_address === '::1' || t.ip_address === '127.0.0.1';
-                    deviceHtml = `
-                        <div class="ticket-device-info">
-                            ${t.ip_address && !isLocalhost ? `<span class="device-ip">🌐 <span class="ip-address">${t.ip_address}</span></span>` : ''}
-                            ${t.user_agent ? `<span class="device-ua" title="${t.user_agent}">📱 ${formattedUA}</span>` : ''}
                         </div>
                     `;
                 }
@@ -410,7 +399,7 @@ const app = {
                         </div>
                         <div class="ticket-desc">${t.problem_desc}</div>
                         ${t.comment ? `<div class="ticket-comment">«${t.comment}»</div>` : ''}
-                        ${commentsHtml}${deviceHtml}
+                        ${commentsHtml}
                         <div class="meta">
                             ⏱️ Срочность: <b>${t.urgency}</b> | 📅 ${new Date(t.created_at).toLocaleString('ru-RU')}
                             ${t.completed_at ? ` | ✅ ${new Date(t.completed_at).toLocaleString('ru-RU')}` : ''}
@@ -430,7 +419,7 @@ const app = {
                 `;
             }).join('');
         } catch (err) {
-            container.innerHTML = `<p style="color:var(--danger);text-align:center;">Ошибка: ${err.message}</p>`;
+            container.innerHTML = `<p class="error-state">Ошибка: ${err.message}</p>`;
         }
     },
 
@@ -438,7 +427,7 @@ const app = {
         const container = document.getElementById(archived ? 'archived-container' : 'tickets-container');
         if (!container) return;
         if (this.searchTimeout) clearTimeout(this.searchTimeout);
-        container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Загрузка...</p>';
+        container.innerHTML = '<p class="loading-state">Загрузка...</p>';
 
         try {
             const res = await fetch(`/api/tickets?archived=${archived}&admin=true`);
@@ -453,7 +442,7 @@ const app = {
             const isSuperAdmin = this.currentUser && (this.currentUser.role === 'super_admin' || this.currentUser.role === 'director');
 
             let html = `
-                <div class="controls-bar" id="controls-bar-tickets">
+                <div class="controls-bar">
                     <div class="search-wrapper">
                         <input type="text" id="search-${searchKey}" placeholder="🔍 Поиск..." value="${searchQuery}" 
                                oninput="app.handleSearch('${searchKey}', this.value, 'tickets', ${archived})"
@@ -477,7 +466,7 @@ const app = {
             `;
 
             if (!sorted.length) {
-                html += `<p style="text-align:center;color:var(--text-muted);padding:40px;">${searchQuery ? 'Ничего не найдено' : (archived ? 'Нет выполненных' : 'Нет активных')}</p>`;
+                html += `<p class="empty-state">${searchQuery ? 'Ничего не найдено' : (archived ? 'Нет выполненных' : 'Нет активных')}</p>`;
             } else {
                 html += sorted.map(t => {
                     const timeClass = t.color_class || this.getTicketTimeClass(t.created_at);
@@ -490,32 +479,20 @@ const app = {
                                     <summary>💬 Комментарии (${comments.length})</summary>
                                     ${comments.map(c => {
                                         const isPrivate = c.is_public === false;
-                                        let borderColor = '#4a9eff', bgColor = 'rgba(74,158,255,0.05)', icon = '🌐', badge = 'Публичный';
+                                        let borderColor = '#4a9eff', icon = '🌐', badge = 'Публичный';
                                         if (c.admin_id) {
-                                            if (isPrivate) { borderColor = '#ffaa33'; bgColor = 'rgba(255,170,51,0.1)'; icon = '🔒'; badge = 'Приватный'; }
+                                            if (isPrivate) { borderColor = '#ffaa33'; icon = '🔒'; badge = 'Приватный'; }
                                         } else if (c.user_id) {
-                                            borderColor = '#33dd88'; bgColor = 'rgba(51,221,136,0.05)'; icon = '👤'; badge = 'Пользователь';
+                                            borderColor = '#33dd88'; icon = '👤'; badge = 'Пользователь';
                                         }
                                         return `
-                                            <div style="border-left:4px solid ${borderColor};background:${bgColor};padding:10px 14px;border-radius:6px;margin:6px 0;">
-                                                <div style="font-size:13px;">${icon} ${c.comment_text} <span style="font-size:9px;padding:1px 10px;border-radius:12px;background:${borderColor}22;color:${borderColor};border:1px solid ${borderColor}55;">${badge}</span></div>
-                                                <div style="font-size:11px;color:var(--text-muted);">${this.formatCommentAuthor(c)} • ${new Date(c.created_at).toLocaleString('ru-RU')}</div>
+                                            <div class="comment-item" style="border-left-color: ${borderColor};">
+                                                <div class="comment-text">${icon} ${c.comment_text} <span class="comment-badge" style="border-color:${borderColor};color:${borderColor};">${badge}</span></div>
+                                                <div class="comment-meta">${this.formatCommentAuthor(c)} • ${new Date(c.created_at).toLocaleString('ru-RU')}</div>
                                             </div>
                                         `;
                                     }).join('')}
                                 </details>
-                            </div>
-                        `;
-                    }
-
-                    let deviceHtml = '';
-                    if (t.ip_address || t.user_agent) {
-                        const formattedUA = this.formatUserAgent(t.user_agent);
-                        const isLocalhost = t.ip_address === '::1' || t.ip_address === '127.0.0.1';
-                        deviceHtml = `
-                            <div class="ticket-device-info">
-                                ${t.ip_address && !isLocalhost ? `<span class="device-ip">🌐 <span class="ip-address">${t.ip_address}</span></span>` : ''}
-                                ${t.user_agent ? `<span class="device-ua" title="${t.user_agent}">📱 ${formattedUA}</span>` : ''}
                             </div>
                         `;
                     }
@@ -528,7 +505,7 @@ const app = {
                             </div>
                             <div class="ticket-desc">${t.problem_desc}</div>
                             ${t.comment ? `<div class="ticket-comment">«${t.comment}»</div>` : ''}
-                            ${commentsHtml}${deviceHtml}
+                            ${commentsHtml}
                             <div class="meta">
                                 ⏱️ Срочность: <b>${t.urgency}</b> | 📅 ${new Date(t.created_at).toLocaleString('ru-RU')}
                                 ${t.completed_at ? ` | ✅ ${new Date(t.completed_at).toLocaleString('ru-RU')}` : ''}
@@ -554,7 +531,7 @@ const app = {
             const searchInput = document.getElementById(`search-${searchKey}`);
             if (searchInput) { searchInput.focus(); const len = searchInput.value.length; searchInput.setSelectionRange(len, len); }
         } catch (err) {
-            container.innerHTML = `<p style="color:var(--danger);text-align:center;">Ошибка: ${err.message}</p>`;
+            container.innerHTML = `<p class="error-state">Ошибка: ${err.message}</p>`;
         }
     },
 
@@ -607,8 +584,53 @@ const app = {
     },
 
     async completeTicket(id) {
-        const executor = prompt('Кто выполнил?');
-        if (!executor || !executor.trim()) return;
+        if (!this.currentUser) {
+            alert('Ошибка: не авторизован');
+            this.showScreen('screen-login');
+            return;
+        }
+
+        const existing = document.getElementById('ticket-complete-modal');
+        if (existing) existing.remove();
+
+        const modalHtml = `
+            <div id="ticket-complete-modal" class="modal active" style="display:flex;">
+                <div class="modal-content" style="max-width:500px;">
+                    <span class="close-modal" onclick="app.closeTicketCompleteModal()">&times;</span>
+                    <h2>✅ Завершить заявку #${id}</h2>
+                    <input type="hidden" id="ticket-complete-id" value="${id}">
+                    <div class="form-group">
+                        <label>Кто выполнил *</label>
+                        <input type="text" id="ticket-complete-executor" placeholder="ФИО исполнителя" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Что сделано *</label>
+                        <textarea id="ticket-complete-description" rows="4" placeholder="Опишите, что было сделано..." required></textarea>
+                    </div>
+                    <div class="modal-buttons">
+                        <button class="btn-save" onclick="app.submitTicketComplete()">💾 Завершить</button>
+                        <button class="btn-cancel" onclick="app.closeTicketCompleteModal()">❌ Отмена</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    closeTicketCompleteModal() {
+        const modal = document.getElementById('ticket-complete-modal');
+        if (modal) modal.remove();
+    },
+
+    async submitTicketComplete() {
+        const id = document.getElementById('ticket-complete-id')?.value;
+        const executor = document.getElementById('ticket-complete-executor')?.value.trim();
+        const description = document.getElementById('ticket-complete-description')?.value.trim();
+
+        if (!executor) { alert('Введите, кто выполнил заявку'); return; }
+        if (!description) { alert('Опишите, что было сделано'); return; }
+        if (!this.currentUser) { alert('Не авторизован'); return; }
+
         try {
             const res = await fetch(`/api/tickets/${id}/complete`, {
                 method: 'PUT',
@@ -616,9 +638,25 @@ const app = {
                 body: JSON.stringify({ executor_name: executor.trim() })
             });
             if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+
+            const commentRes = await fetch(`/api/tickets/${id}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    comment_text: `✅ Выполнил: ${executor}\nЧто сделано: ${description}`, 
+                    admin_id: this.currentUser.id,
+                    is_public: false
+                })
+            });
+            if (!commentRes.ok) { const e = await commentRes.json(); throw new Error(e.error); }
+
+            this.closeTicketCompleteModal();
             const activeTab = document.querySelector('.nav-btn.active[data-tab]');
             if (activeTab) this.switchTab(activeTab.dataset.tab);
-        } catch (e) { alert('Ошибка: ' + e.message); }
+            alert('✅ Заявка завершена и приватный комментарий добавлен!');
+        } catch (e) { 
+            alert('Ошибка: ' + e.message); 
+        }
     },
 
     async deleteTicket(id) {
@@ -631,56 +669,48 @@ const app = {
         } catch (e) { alert('Ошибка: ' + e.message); }
     },
 
-    // ============================================================
-    // ОТПРАВКА ЗАЯВКИ (только для авторизованных пользователей)
-    // ============================================================
-
     async submitTicket(e) {
-    e.preventDefault();
-    
-    if (!this.currentUser || this.currentUserType !== 'user') {
-        alert('❌ Для создания заявки необходимо войти как пользователь');
-        this.showScreen('screen-login');
-        return;
-    }
-
-    const form = e.target;
-    const data = {
-        problem: document.querySelector('[name="problem"]')?.value || '',
-        location: document.querySelector('[name="location"]')?.value || '',
-        employee: this.currentUser.full_name || 'Пользователь', // Берем из аккаунта
-        comment: document.querySelector('[name="comment"]')?.value || '',
-        urgency: document.querySelector('[name="urgency"]')?.value || 'Средняя',
-        user_id: this.currentUser.id
-    };
-
-    const btn = form.querySelector('.btn-round');
-    if (btn) { btn.textContent = '...'; btn.disabled = true; }
-
-    try {
-        const res = await fetch('/api/tickets', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        const response = await res.json();
-        if (!res.ok) throw new Error(response.error || 'Ошибка');
-
-        this.saveTicketToken(response.trackingToken);
-        form.reset();
-        alert(`✅ Заявка #${response.ticketId} создана!\n🔑 Токен: ${response.trackingToken}`);
-        if (confirm('Перейти к моим заявкам?')) {
-            this.showScreen('screen-track-tickets');
-            this.loadTrackedTickets();
+        e.preventDefault();
+        
+        if (!this.currentUser || this.currentUserType !== 'user') {
+            alert('❌ Для создания заявки необходимо войти как пользователь');
+            this.showScreen('screen-login');
+            return;
         }
-    } catch (e) { alert('Ошибка: ' + e.message); } finally {
-        if (btn) { btn.textContent = 'Отправить'; btn.disabled = false; }
-    }
-},
 
-    // ============================================================
-    // ТРЕКИНГ
-    // ============================================================
+        const form = e.target;
+        const data = {
+            problem: document.querySelector('[name="problem"]')?.value || '',
+            location: document.querySelector('[name="location"]')?.value || '',
+            employee: this.currentUser.full_name || 'Пользователь',
+            comment: document.querySelector('[name="comment"]')?.value || '',
+            urgency: document.querySelector('[name="urgency"]')?.value || 'Средняя',
+            user_id: this.currentUser.id
+        };
+
+        const btn = form.querySelector('.btn-round');
+        if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
+        try {
+            const res = await fetch('/api/tickets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const response = await res.json();
+            if (!res.ok) throw new Error(response.error || 'Ошибка');
+
+            this.saveTicketToken(response.trackingToken);
+            form.reset();
+            alert(`✅ Заявка #${response.ticketId} создана!\n🔑 Токен: ${response.trackingToken}`);
+            if (confirm('Перейти к моим заявкам?')) {
+                this.showScreen('screen-track-tickets');
+                this.loadTrackedTickets();
+            }
+        } catch (e) { alert('Ошибка: ' + e.message); } finally {
+            if (btn) { btn.textContent = 'Отправить'; btn.disabled = false; }
+        }
+    },
 
     saveTicketToken(token) {
         try {
@@ -711,7 +741,7 @@ const app = {
         const tokens = this.getSavedTokens();
 
         if (!tokens.length) {
-            container.innerHTML = `<div class="track-empty"><p style="color:#718096;">📭 Нет заявок</p><button class="btn-create-ticket" onclick="app.showScreen('screen-ticket')">📝 Создать</button></div>`;
+            container.innerHTML = `<div class="track-empty"><p>📭 Нет заявок</p><button class="btn-create-ticket" onclick="app.showScreen('screen-ticket')">📝 Создать</button></div>`;
             return;
         }
 
@@ -725,7 +755,7 @@ const app = {
             const tickets = await res.json();
 
             if (!tickets.length) {
-                container.innerHTML = `<div class="track-empty"><p style="color:#718096;">📭 Заявки не найдены</p></div>`;
+                container.innerHTML = `<div class="track-empty"><p>📭 Заявки не найдены</p></div>`;
                 return;
             }
 
@@ -747,12 +777,12 @@ const app = {
                 ` : '';
 
                 const commentForm = `
-                    <div class="track-comment-form" style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;">
-                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <input type="text" id="track-comment-${t.id}" placeholder="Ваш комментарий..." style="flex:3;min-width:200px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                            <button onclick="app.addUserCommentToTrack(${t.id})" style="padding:8px 20px;background:#4a9eff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">💬 Отправить</button>
+                    <div class="track-comment-form">
+                        <div>
+                            <input type="text" id="track-comment-${t.id}" placeholder="Ваш комментарий...">
+                            <button onclick="app.addUserCommentToTrack(${t.id})">💬 Отправить</button>
                         </div>
-                        <div style="font-size:11px;color:#718096;margin-top:4px;">👤 ${this.currentUser?.full_name || 'Пользователь'}</div>
+                        <div class="comment-meta">👤 ${this.currentUser?.full_name || 'Пользователь'}</div>
                     </div>
                 `;
 
@@ -772,7 +802,7 @@ const app = {
                             ${t.executor_name ? `<span>✅ ${t.executor_name}</span>` : ''}
                         </div>
                         ${commentsHtml}
-                        ${!t.status ? commentForm : '<div style="color:#718096;font-size:13px;margin-top:12px;">✅ Заявка выполнена</div>'}
+                        ${!t.status ? commentForm : '<div class="track-completed">✅ Заявка выполнена</div>'}
                         <div class="track-card-footer">
                             <span class="track-token">🔑 ${t.tracking_token}</span>
                             <button class="track-copy" onclick="app.copyToken('${t.tracking_token}')">📋 Копировать</button>
@@ -782,7 +812,7 @@ const app = {
                 `;
             }).join('');
         } catch (e) {
-            container.innerHTML = `<div class="track-empty"><p style="color:#ff3355;">❌ ${e.message}</p><button onclick="app.loadTrackedTickets()">🔄 Попробовать</button></div>`;
+            container.innerHTML = `<div class="track-empty"><p class="error-state">❌ ${e.message}</p><button onclick="app.loadTrackedTickets()">🔄 Попробовать</button></div>`;
         }
     },
 
@@ -836,13 +866,13 @@ const app = {
         const input = document.getElementById('find-ticket-input');
         const result = document.getElementById('find-result');
         const token = input.value.trim();
-        if (!token) { result.innerHTML = '<p style="color:#ffaa33;">⚠️ Введите номер</p>'; return; }
-        result.innerHTML = '<p style="color:#718096;">⏳ Поиск...</p>';
+        if (!token) { result.innerHTML = '<p class="warning-state">⚠️ Введите номер</p>'; return; }
+        result.innerHTML = '<p class="loading-state">⏳ Поиск...</p>';
 
         try {
             const res = await fetch(`/api/ticket/track/${token}`);
             if (res.status === 404) {
-                result.innerHTML = `<div class="find-not-found"><p style="color:#718096;">❌ Заявка ${token} не найдена</p></div>`;
+                result.innerHTML = `<div class="find-not-found"><p>❌ Заявка ${token} не найдена</p></div>`;
                 return;
             }
             if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
@@ -883,7 +913,7 @@ const app = {
                 </div>
             `;
         } catch (e) {
-            result.innerHTML = `<p style="color:#ff3355;">❌ ${e.message}</p>`;
+            result.innerHTML = `<p class="error-state">❌ ${e.message}</p>`;
         }
     },
 
@@ -921,58 +951,142 @@ const app = {
             const priorityColors = { 'low': '#48bb78', 'medium': '#ecc94b', 'high': '#f56565' };
             const isSuperAdmin = this.currentUser && (this.currentUser.role === 'super_admin' || this.currentUser.role === 'director');
             const currentAdminId = this.currentUser?.id;
+            const isAdmin = this.currentUserType === 'admin';
 
-            if (!sorted.length) {
-                container.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:40px;">${searchQuery ? 'Ничего не найдено' : (archived ? 'Нет выполненных' : 'Нет активных')}</p>`;
-                return;
-            }
+            let html = '';
 
-            container.innerHTML = `<div class="tasks-grid">${sorted.map(task => {
-                const canComplete = task.status !== 'completed' && (task.assigned_to === currentAdminId || !task.assigned_to);
-                return `
-                    <div class="task-card" style="border-left:4px solid ${priorityColors[task.priority] || '#4a9eff'}">
-                        <div class="task-header">
-                            <h3 class="task-title">${task.title}</h3>
-                            <span class="task-status ${task.status}">${statusLabels[task.status]}</span>
+            if (!archived) {
+                html += `
+                    <div class="controls-bar">
+                        <div class="search-wrapper">
+                            <input type="text" id="search-${searchKey}" placeholder="🔍 Поиск по задачам..." value="${searchQuery}" 
+                                   oninput="app.handleSearch('${searchKey}', this.value, 'tasks', ${archived})"
+                                   onkeydown="app.handleSearchEnter(event, '${searchKey}', 'tasks', ${archived})">
+                            ${searchQuery ? `<button class="clear-search" onclick="app.clearSearch('${searchKey}', 'tasks', ${archived})">✕</button>` : ''}
                         </div>
-                        ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
-                        <div class="task-meta">
-                            <div>👤 ${task.assigned_to_name || 'Не назначена'}</div>
-                            <div>📅 ${new Date(task.created_at).toLocaleDateString('ru-RU')}</div>
-                            ${task.due_date ? `<div>⏰ ${new Date(task.due_date).toLocaleDateString('ru-RU')}</div>` : ''}
-                            ${task.completed_by_name ? `<div>✅ ${task.completed_by_name}</div>` : ''}
-                            <div>🏷️ ${priorityLabels[task.priority]}</div>
+                        <div class="sort-wrapper">
+                            <span>Сортировка:</span>
+                            <select onchange="app.sortState['${sortKey}'] = {field: this.value.split('-')[0], order: this.value.split('-')[1]}; app.loadTasks(${archived})">
+                                <option value="created_at-desc" ${sort.field === 'created_at' && sort.order === 'desc' ? 'selected' : ''}>По дате (новые)</option>
+                                <option value="created_at-asc" ${sort.field === 'created_at' && sort.order === 'asc' ? 'selected' : ''}>По дате (старые)</option>
+                                <option value="due_date-asc" ${sort.field === 'due_date' && sort.order === 'asc' ? 'selected' : ''}>По сроку</option>
+                                <option value="priority-desc" ${sort.field === 'priority' && sort.order === 'desc' ? 'selected' : ''}>По приоритету</option>
+                            </select>
                         </div>
-                        <div class="task-actions">
-                            ${!archived ? `
-                                ${task.status !== 'completed' && canComplete ? `
-                                    ${task.status === 'pending' ? `<button class="btn-complete" onclick="app.updateTaskStatus(${task.id}, 'in_progress', ${currentAdminId})">🔄 Взять</button>` : ''}
-                                    ${task.status === 'in_progress' ? `<button class="btn-complete" onclick="app.updateTaskStatus(${task.id}, 'completed', ${currentAdminId})">✅ Завершить</button>` : ''}
-                                ` : ''}
-                                ${task.status === 'completed' && isSuperAdmin ? `<button class="btn-reopen" onclick="app.updateTaskStatus(${task.id}, 'pending', ${currentAdminId})">🔄 Открыть</button>` : ''}
-                                ${isSuperAdmin ? `
-                                    <button class="btn-edit-task" onclick="app.showEditTaskModal(${task.id})">✏️</button>
-                                    <button class="btn-delete" onclick="app.deleteTask(${task.id})">🗑️</button>
-                                ` : ''}
-                            ` : `
-                                <span style="color:#33dd88;font-weight:600;">✅ Выполнено</span>
-                                ${isSuperAdmin ? `
-                                    <button class="btn-reopen" onclick="app.updateTaskStatus(${task.id}, 'pending', ${currentAdminId})">🔄 Открыть</button>
-                                    <button class="btn-delete" onclick="app.deleteTask(${task.id})">🗑️</button>
-                                ` : ''}
-                            `}
-                        </div>
+                        <div class="results-count">Найдено: ${sorted.length}</div>
+                        ${isAdmin ? `<button class="btn-add-inventory" onclick="app.showCreateTaskModal()">➕ Создать задачу</button>` : ''}
                     </div>
                 `;
-            }).join('')}</div>`;
-        } catch (e) { container.innerHTML = `<p style="color:var(--danger);">Ошибка: ${e.message}</p>`; }
+            } else {
+                html += `
+                    <div class="controls-bar">
+                        <div class="search-wrapper">
+                            <input type="text" id="search-${searchKey}" placeholder="🔍 Поиск по архиву задач..." value="${searchQuery}" 
+                                   oninput="app.handleSearch('${searchKey}', this.value, 'tasks', ${archived})"
+                                   onkeydown="app.handleSearchEnter(event, '${searchKey}', 'tasks', ${archived})">
+                            ${searchQuery ? `<button class="clear-search" onclick="app.clearSearch('${searchKey}', 'tasks', ${archived})">✕</button>` : ''}
+                        </div>
+                        <div class="sort-wrapper">
+                            <span>Сортировка:</span>
+                            <select onchange="app.sortState['${sortKey}'] = {field: this.value.split('-')[0], order: this.value.split('-')[1]}; app.loadTasks(${archived})">
+                                <option value="completed_at-desc" ${sort.field === 'completed_at' && sort.order === 'desc' ? 'selected' : ''}>По дате (новые)</option>
+                                <option value="completed_at-asc" ${sort.field === 'completed_at' && sort.order === 'asc' ? 'selected' : ''}>По дате (старые)</option>
+                                <option value="created_at-desc" ${sort.field === 'created_at' && sort.order === 'desc' ? 'selected' : ''}>По созданию</option>
+                                <option value="title-asc" ${sort.field === 'title' && sort.order === 'asc' ? 'selected' : ''}>По названию</option>
+                            </select>
+                        </div>
+                        <div class="results-count">Найдено: ${sorted.length}</div>
+                    </div>
+                `;
+            }
+
+            if (!sorted.length) {
+                html += `<p class="empty-state">${searchQuery ? 'По вашему запросу ничего не найдено' : (archived ? 'Нет выполненных задач' : 'Нет активных задач')}</p>`;
+            } else {
+                html += `<div class="tasks-grid">`;
+                for (const task of sorted) {
+                    let commentsHtml = '';
+                    try {
+                        const commentsRes = await fetch(`/api/tasks/${task.id}/comments`);
+                        if (commentsRes.ok) {
+                            const comments = await commentsRes.json();
+                            if (comments.length) {
+                                commentsHtml = `
+                                    <div class="task-comments">
+                                        <details>
+                                            <summary>💬 Комментарии (${comments.length})</summary>
+                                            ${comments.map(c => `
+                                                <div class="comment-item" style="border-left-color: ${c.admin_id ? '#4a9eff' : '#33dd88'};">
+                                                    <div class="comment-text">${c.comment_text}</div>
+                                                    <div class="comment-meta">
+                                                        ${c.admin_id ? `👑 ${c.admin_name || 'Админ'}` : `👤 ${c.user_name || 'Пользователь'}`}
+                                                        • ${new Date(c.created_at).toLocaleString('ru-RU')}
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </details>
+                                    </div>
+                                `;
+                            }
+                        }
+                    } catch (e) { console.error('Ошибка загрузки комментариев:', e); }
+
+                    const canComplete = task.status !== 'completed' && (task.assigned_to === currentAdminId || !task.assigned_to);
+                    const pulseClass = isAdmin ? '' : 'no-pulse';
+
+                    html += `
+                        <div class="task-card ${pulseClass}" style="border-left-color: ${priorityColors[task.priority] || '#4a9eff'};">
+                            <div class="task-header">
+                                <h3 class="task-title">${task.title}</h3>
+                                <span class="task-status ${task.status}">${statusLabels[task.status] || task.status}</span>
+                            </div>
+                            ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                            <div class="task-meta">
+                                <div>👤 ${task.assigned_to_name || 'Не назначена'}</div>
+                                <div>📅 ${new Date(task.created_at).toLocaleDateString('ru-RU')}</div>
+                                ${task.due_date ? `<div>⏰ ${new Date(task.due_date).toLocaleDateString('ru-RU')}</div>` : ''}
+                                ${task.completed_by_name ? `<div>✅ ${task.completed_by_name}</div>` : ''}
+                                <div>🏷️ ${priorityLabels[task.priority]}</div>
+                            </div>
+                            ${commentsHtml}
+                            <div class="task-actions">
+                                ${!archived ? `
+                                    ${task.status !== 'completed' && canComplete ? `
+                                        ${task.status === 'pending' ? `<button class="btn-complete" onclick="app.updateTaskStatus(${task.id}, 'in_progress', ${currentAdminId})">🔄 Взять</button>` : ''}
+                                        ${task.status === 'in_progress' ? `<button class="btn-complete" onclick="app.openCompleteModal(${task.id})">✅ Завершить</button>` : ''}
+                                    ` : ''}
+                                    ${task.status === 'completed' && isSuperAdmin ? `<button class="btn-reopen" onclick="app.updateTaskStatus(${task.id}, 'pending', ${currentAdminId})">🔄 Открыть</button>` : ''}
+                                    ${isSuperAdmin ? `
+                                        <button class="btn-edit-task" onclick="app.showEditTaskModal(${task.id})">✏️</button>
+                                        <button class="btn-delete" onclick="app.deleteTask(${task.id})">🗑️</button>
+                                    ` : ''}
+                                    <button class="btn-comment" onclick="app.showTaskCommentModal(${task.id})">💬 Комментарий</button>
+                                ` : `
+                                    <span class="task-completed-label">✅ Выполнено</span>
+                                    ${isSuperAdmin ? `
+                                        <button class="btn-reopen" onclick="app.updateTaskStatus(${task.id}, 'pending', ${currentAdminId})">🔄 Открыть</button>
+                                        <button class="btn-delete" onclick="app.deleteTask(${task.id})">🗑️</button>
+                                    ` : ''}
+                                    <button class="btn-comment" onclick="app.showTaskCommentModal(${task.id})">💬 Комментарий</button>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = `<p class="error-state">Ошибка: ${e.message}</p>`;
+        }
     },
 
     async loadTasks(archived = false) {
         const container = document.getElementById(archived ? 'tasks-archive-container' : 'tasks-container');
         if (!container) return;
         if (this.searchTimeout) clearTimeout(this.searchTimeout);
-        container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Загрузка...</p>';
+        container.innerHTML = '<p class="loading-state">Загрузка...</p>';
 
         try {
             const url = archived ? '/api/tasks/archive' : '/api/tasks';
@@ -996,7 +1110,7 @@ const app = {
             let html = `
                 <div class="controls-bar" id="controls-bar-tasks">
                     <div class="search-wrapper">
-                        <input type="text" id="search-${searchKey}" placeholder="🔍 Поиск..." value="${searchQuery}" 
+                        <input type="text" id="search-${searchKey}" placeholder="🔍 Поиск по задачам..." value="${searchQuery}" 
                                oninput="app.handleSearch('${searchKey}', this.value, 'tasks', ${archived})"
                                onkeydown="app.handleSearchEnter(event, '${searchKey}', 'tasks', ${archived})" autofocus>
                         ${searchQuery ? `<button class="clear-search" onclick="app.clearSearch('${searchKey}', 'tasks', ${archived})">✕</button>` : ''}
@@ -1011,52 +1125,16 @@ const app = {
                         </select>
                     </div>
                     <div class="results-count">Найдено: ${sorted.length}</div>
-                    ${!archived && isSuperAdmin ? `<button class="btn-add-inventory" onclick="app.showCreateTaskModal()" style="margin:0;">➕ Создать</button>` : ''}
+                    ${!archived ? `<button class="btn-add-inventory" onclick="app.showCreateTaskModal()">➕ Создать задачу</button>` : ''}
                 </div>
                 <div id="tasks-list-container">
             `;
 
             if (!sorted.length) {
-                html += `<p style="text-align:center;color:var(--text-muted);padding:40px;">${searchQuery ? 'Ничего не найдено' : (archived ? 'Нет выполненных' : 'Нет активных')}</p>`;
+                html += `<p class="empty-state">${searchQuery ? 'Ничего не найдено' : (archived ? 'Нет выполненных' : 'Нет активных')}</p>`;
             } else {
-                html += `<div class="tasks-grid">${sorted.map(task => {
-                    const canComplete = task.status !== 'completed' && (task.assigned_to === currentAdminId || !task.assigned_to);
-                    return `
-                        <div class="task-card" style="border-left:4px solid ${priorityColors[task.priority] || '#4a9eff'}">
-                            <div class="task-header">
-                                <h3 class="task-title">${task.title}</h3>
-                                <span class="task-status ${task.status}">${statusLabels[task.status]}</span>
-                            </div>
-                            ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
-                            <div class="task-meta">
-                                <div>👤 ${task.assigned_to_name || 'Не назначена'}</div>
-                                <div>📅 ${new Date(task.created_at).toLocaleDateString('ru-RU')}</div>
-                                ${task.due_date ? `<div>⏰ ${new Date(task.due_date).toLocaleDateString('ru-RU')}</div>` : ''}
-                                ${task.completed_by_name ? `<div>✅ ${task.completed_by_name}</div>` : ''}
-                                <div>🏷️ ${priorityLabels[task.priority]}</div>
-                            </div>
-                            <div class="task-actions">
-                                ${!archived ? `
-                                    ${task.status !== 'completed' && canComplete ? `
-                                        ${task.status === 'pending' ? `<button class="btn-complete" onclick="app.updateTaskStatus(${task.id}, 'in_progress', ${currentAdminId})">🔄 Взять</button>` : ''}
-                                        ${task.status === 'in_progress' ? `<button class="btn-complete" onclick="app.updateTaskStatus(${task.id}, 'completed', ${currentAdminId})">✅ Завершить</button>` : ''}
-                                    ` : ''}
-                                    ${task.status === 'completed' && isSuperAdmin ? `<button class="btn-reopen" onclick="app.updateTaskStatus(${task.id}, 'pending', ${currentAdminId})">🔄 Открыть</button>` : ''}
-                                    ${isSuperAdmin ? `
-                                        <button class="btn-edit-task" onclick="app.showEditTaskModal(${task.id})">✏️</button>
-                                        <button class="btn-delete" onclick="app.deleteTask(${task.id})">🗑️</button>
-                                    ` : ''}
-                                ` : `
-                                    <span style="color:#33dd88;font-weight:600;">✅ Выполнено</span>
-                                    ${isSuperAdmin ? `
-                                        <button class="btn-reopen" onclick="app.updateTaskStatus(${task.id}, 'pending', ${currentAdminId})">🔄 Открыть</button>
-                                        <button class="btn-delete" onclick="app.deleteTask(${task.id})">🗑️</button>
-                                    ` : ''}
-                                `}
-                            </div>
-                        </div>
-                    `;
-                }).join('')}</div>`;
+                await this.updateTasksList(archived);
+                return;
             }
             html += `</div>`;
             container.innerHTML = html;
@@ -1064,7 +1142,7 @@ const app = {
             const searchInput = document.getElementById(`search-${searchKey}`);
             if (searchInput) { searchInput.focus(); const len = searchInput.value.length; searchInput.setSelectionRange(len, len); }
         } catch (e) {
-            container.innerHTML = `<p style="color:var(--danger);">Ошибка: ${e.message}</p>`;
+            container.innerHTML = `<p class="error-state">Ошибка: ${e.message}</p>`;
         }
     },
 
@@ -1072,20 +1150,95 @@ const app = {
         try { const res = await fetch('/api/admins'); return await res.json(); } catch (e) { return []; }
     },
 
-    // ============================================================
-    // ЗАДАЧИ - МОДАЛКИ
-    // ============================================================
-
-    async showCreateTaskModal() {
-        if (!this.currentUser || !['super_admin', 'director'].includes(this.currentUser.role)) {
-            alert('Только главный администратор или директор');
+    openCompleteModal(taskId) {
+        if (!this.currentUser) {
+            alert('Ошибка: не авторизован');
+            this.showScreen('screen-login');
             return;
         }
+        const existing = document.getElementById('task-complete-modal');
+        if (existing) existing.remove();
+
+        const modalHtml = `
+            <div id="task-complete-modal" class="modal active" style="display:flex;">
+                <div class="modal-content" style="max-width:500px;">
+                    <span class="close-modal" onclick="app.closeCompleteModal()">&times;</span>
+                    <h2>✅ Завершить задачу</h2>
+                    <input type="hidden" id="complete-task-id" value="${taskId}">
+                    <div class="form-group">
+                        <label>Кто выполнил *</label>
+                        <input type="text" id="complete-executor" placeholder="ФИО исполнителя" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Что сделано *</label>
+                        <textarea id="complete-description" rows="4" placeholder="Опишите, что было сделано..." required></textarea>
+                    </div>
+                    <div class="modal-buttons">
+                        <button class="btn-save" onclick="app.submitCompleteTask()">💾 Завершить</button>
+                        <button class="btn-cancel" onclick="app.closeCompleteModal()">❌ Отмена</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    closeCompleteModal() {
+        const modal = document.getElementById('task-complete-modal');
+        if (modal) modal.remove();
+    },
+
+    async submitCompleteTask() {
+        const taskId = document.getElementById('complete-task-id')?.value;
+        const executor = document.getElementById('complete-executor')?.value.trim();
+        const description = document.getElementById('complete-description')?.value.trim();
+
+        if (!executor) { alert('Введите, кто выполнил задачу'); return; }
+        if (!description) { alert('Опишите, что было сделано'); return; }
+        if (!this.currentUser) { alert('Не авторизован'); return; }
+
+        try {
+            const statusRes = await fetch(`/api/tasks/${taskId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'completed', admin_id: this.currentUser.id })
+            });
+            if (!statusRes.ok) { const e = await statusRes.json(); throw new Error(e.error); }
+
+            const commentRes = await fetch(`/api/tasks/${taskId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    comment_text: `✅ Выполнил: ${executor}\nЧто сделано: ${description}`, 
+                    admin_id: this.currentUser.id 
+                })
+            });
+            if (!commentRes.ok) { const e = await commentRes.json(); throw new Error(e.error); }
+
+            this.closeCompleteModal();
+            const activeTab = document.querySelector('.nav-btn.active[data-tab]');
+            this.loadTasks(activeTab?.dataset.tab === 'tasks-archive');
+            alert('✅ Задача завершена и комментарий добавлен!');
+        } catch (e) { 
+            alert('Ошибка: ' + e.message); 
+        }
+    },
+
+    async showCreateTaskModal() {
+        if (!this.currentUser) {
+            alert('Ошибка: не авторизован');
+            this.showScreen('screen-login');
+            return;
+        }
+        
         const admins = await this.loadAdmins();
         const modal = document.getElementById('task-modal');
         const form = document.getElementById('task-form');
         const title = document.getElementById('modal-title');
-        if (!modal || !form || !title) return;
+        if (!modal || !form || !title) {
+            console.error('❌ Элементы модального окна не найдены');
+            return;
+        }
 
         title.textContent = '📋 Создать задачу';
         const selectHtml = admins.map(a => `<option value="${a.id}">${a.full_name}</option>`).join('');
@@ -1140,25 +1293,39 @@ const app = {
 
     async createTask() {
         const title = document.getElementById('task-title')?.value.trim();
-        if (!title) { alert('Введите название'); return; }
+        const description = document.getElementById('task-description')?.value.trim();
+        const assigned_to = document.getElementById('task-assigned-to')?.value;
+        const priority = document.getElementById('task-priority')?.value;
+        const due_date = document.getElementById('task-due-date')?.value;
+        
+        if (!title) { alert('Введите название задачи'); return; }
+        
         try {
             const res = await fetch('/api/tasks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     title,
-                    description: document.getElementById('task-description')?.value.trim() || null,
-                    assigned_to: document.getElementById('task-assigned-to')?.value || null,
-                    priority: document.getElementById('task-priority')?.value,
-                    due_date: document.getElementById('task-due-date')?.value || null,
+                    description: description || null,
+                    assigned_to: assigned_to || null,
+                    priority: priority || 'medium',
+                    due_date: due_date || null,
                     created_by: this.currentUser.id
                 })
             });
-            if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+            
+            if (!res.ok) { 
+                const e = await res.json(); 
+                throw new Error(e.error || 'Ошибка создания задачи'); 
+            }
+            
             this.closeTaskModal();
             this.loadTasks(false);
-            alert('✅ Создано');
-        } catch (e) { alert('Ошибка: ' + e.message); }
+            alert('✅ Задача создана!');
+        } catch (e) { 
+            console.error('❌ Ошибка создания задачи:', e);
+            alert('Ошибка: ' + e.message); 
+        }
     },
 
     async editTask() {
@@ -1210,34 +1377,53 @@ const app = {
         } catch (e) { alert('Ошибка: ' + e.message); }
     },
 
-    // ============================================================
-    // IP СТАТИСТИКА
-    // ============================================================
+    showTaskCommentModal(taskId) {
+        if (!this.currentUser) {
+            alert('Ошибка: не авторизован');
+            this.showScreen('screen-login');
+            return;
+        }
+        
+        const modal = document.getElementById('task-comment-modal');
+        if (modal) {
+            document.getElementById('task-comment-id').value = taskId;
+            document.getElementById('task-comment-textarea').value = '';
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+        }
+    },
 
-    async loadIPStats() {
-        const container = document.getElementById('ip-container');
-        if (!container) return;
-        container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Загрузка...</p>';
+    closeTaskCommentModal() {
+        const modal = document.getElementById('task-comment-modal');
+        if (modal) { 
+            modal.style.display = 'none'; 
+            modal.classList.remove('active'); 
+        }
+    },
+
+    async submitTaskComment() {
+        const taskId = document.getElementById('task-comment-id')?.value;
+        const text = document.getElementById('task-comment-textarea')?.value.trim();
+        if (!text) { alert('Введите текст'); return; }
+        if (!this.currentUser) { alert('Не авторизован'); return; }
+
         try {
-            const res = await fetch('/api/ip-stats');
-            const stats = await res.json();
-            if (!stats.length) { container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;">Нет данных</p>'; return; }
-            container.innerHTML = `
-                <h3 style="margin-bottom:20px;color:var(--text-primary);">📊 Статистика по IP</h3>
-                <table class="inv-table">
-                    <tr><th>IP</th><th>Заявок</th><th>Устройства</th><th>Первый визит</th><th>Последний</th></tr>
-                    ${stats.map(s => `
-                        <tr>
-                            <td><span class="ip-address">${s.ip_address}</span></td>
-                            <td><strong>${s.total_requests}</strong></td>
-                            <td class="device-cell">${s.user_agents ? [...new Set(s.user_agents)].map(ua => `<div class="device-tag">${this.formatUserAgent(ua)}</div>`).join('') : '—'}</td>
-                            <td>${new Date(s.first_request).toLocaleString('ru-RU')}</td>
-                            <td>${new Date(s.last_request).toLocaleString('ru-RU')}</td>
-                        </tr>
-                    `).join('')}
-                </table>
-            `;
-        } catch (e) { container.innerHTML = `<p style="color:var(--danger);">Ошибка: ${e.message}</p>`; }
+            const res = await fetch(`/api/tasks/${taskId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    comment_text: text, 
+                    admin_id: this.currentUserType === 'admin' ? this.currentUser.id : null,
+                    user_id: this.currentUserType === 'user' ? this.currentUser.id : null
+                })
+            });
+            if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+            
+            this.closeTaskCommentModal();
+            const activeTab = document.querySelector('.nav-btn.active[data-tab]');
+            if (activeTab) this.switchTab(activeTab.dataset.tab);
+            alert('✅ Комментарий добавлен');
+        } catch (e) { alert('Ошибка: ' + e.message); }
     },
 
     // ============================================================
@@ -1296,10 +1482,11 @@ const app = {
                 const active = await activeRes.json();
                 const archived = await archivedRes.json();
                 const map = {};
-                active.forEach(t => { const d = new Date(t.created_at).toLocaleDateString('ru-RU'); if (!map[d]) map[d] = { total: 0, completed: 0, time: 0, count: 0 }; map[d].total++; });
+                active.forEach(t => { const d = new Date(t.created_at).toLocaleDateString('ru-RU'); if (!map[d]) map[d] = { total: 0, completed: 0, pending: 0, time: 0, count: 0 }; map[d].total++; map[d].pending++; });
                 archived.forEach(t => {
                     const d = new Date(t.created_at).toLocaleDateString('ru-RU');
-                    if (!map[d]) map[d] = { total: 0, completed: 0, time: 0, count: 0 };
+                    if (!map[d]) map[d] = { total: 0, completed: 0, pending: 0, time: 0, count: 0 };
+                    map[d].total++;
                     map[d].completed++;
                     if (t.created_at && t.completed_at) {
                         const diff = (new Date(t.completed_at) - new Date(t.created_at)) / (1000 * 60 * 60);
@@ -1309,16 +1496,17 @@ const app = {
                 const stats = Object.keys(map).sort((a, b) => a.split('.').reverse().join('-').localeCompare(b.split('.').reverse().join('-'))).map(d => {
                     const data = map[d];
                     const avg = data.count > 0 ? (data.time / data.count).toFixed(1) : '—';
-                    return { date: d, total: data.total, completed: data.completed, pending: data.total - data.completed, avgSpeed: avg, completionRate: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0 };
+                    return { date: d, total: data.total, completed: data.completed, pending: data.pending, avgSpeed: avg, completionRate: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0 };
                 });
                 const totalAll = stats.reduce((s, d) => s + d.total, 0);
                 const completedAll = stats.reduce((s, d) => s + d.completed, 0);
+                const pendingAll = stats.reduce((s, d) => s + d.pending, 0);
                 const avgSpeedAll = stats.filter(d => d.avgSpeed !== '—').reduce((s, d) => s + parseFloat(d.avgSpeed), 0);
                 const countWithSpeed = stats.filter(d => d.avgSpeed !== '—').length;
                 reportData = { type: 'stats', stats, summary: {
                     total: totalAll,
                     completed: completedAll,
-                    pending: totalAll - completedAll,
+                    pending: pendingAll,
                     avgSpeed: countWithSpeed > 0 ? (avgSpeedAll / countWithSpeed).toFixed(1) : '—',
                     completionRate: totalAll > 0 ? Math.round((completedAll / totalAll) * 100) : 0,
                     days: stats.length
@@ -1339,14 +1527,14 @@ const app = {
     async loadReports() {
         const container = document.getElementById('reports-grid');
         if (!container) return;
-        container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Загрузка...</p>';
+        container.innerHTML = '<p class="loading-state">Загрузка...</p>';
         try {
             const res = await fetch('/api/reports');
             const reports = await res.json();
             const isEditable = this.currentUser && ['director', 'super_admin'].includes(this.currentUser.role);
 
             if (!reports.length) {
-                container.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:40px;grid-column:1/-1;"><p style="font-size:16px;">📭 Нет отчетов</p><button class="btn-add-inventory" onclick="app.createNewReport()">➕ Создать</button></div>`;
+                container.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><p>📭 Нет отчетов</p><button class="btn-add-inventory" onclick="app.createNewReport()">➕ Создать</button></div>`;
                 return;
             }
 
@@ -1358,7 +1546,7 @@ const app = {
                     <div class="report-card">
                         <div class="report-header">
                             <h3>${report.title}</h3>
-                            <span style="font-size:11px;color:var(--text-muted);background:var(--bg-hover);padding:2px 10px;border-radius:12px;">${typeLabel}</span>
+                            <span class="report-type-badge">${typeLabel}</span>
                         </div>
                         ${report.description ? `<p class="report-desc">${report.description}</p>` : ''}
                         <div class="report-meta">
@@ -1369,14 +1557,428 @@ const app = {
                         <div class="report-actions">
                             <button class="btn-complete" onclick="app.viewReport(${report.id})">👁️ Просмотр</button>
                             ${isEditable ? `
-                                <button class="btn-edit-task" onclick="app.editReport(${report.id})">✏️</button>
-                                <button class="btn-delete" onclick="app.deleteReport(${report.id})">🗑️</button>
+                                <button class="btn-edit-task" onclick="app.editReport(${report.id})">✏️ Редактировать</button>
+                                <button class="btn-delete" onclick="app.deleteReport(${report.id})">🗑️ Удалить</button>
                             ` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
-        } catch (e) { container.innerHTML = `<p style="color:var(--danger);">Ошибка: ${e.message}</p>`; }
+        } catch (e) { container.innerHTML = `<p class="error-state">Ошибка: ${e.message}</p>`; }
+    },
+
+    async editReport(reportId) {
+        try {
+            const res = await fetch('/api/reports');
+            const reports = await res.json();
+            const report = reports.find(r => r.id === reportId);
+            if (!report) { alert('Отчет не найден'); return; }
+
+            const modal = document.getElementById('report-edit-action-modal');
+            const titleText = document.getElementById('report-edit-title-text');
+            if (modal && titleText) {
+                titleText.textContent = `"${report.title}"`;
+                modal.style.display = 'flex';
+                modal.classList.add('active');
+                modal.dataset.reportId = reportId;
+            } else {
+                alert('Ошибка: окно редактирования не найдено');
+            }
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    closeReportEditActionModal() {
+        const modal = document.getElementById('report-edit-action-modal');
+        if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); }
+    },
+
+    async editReportTitleAndDesc() {
+        const modal = document.getElementById('report-edit-action-modal');
+        const reportId = modal ? parseInt(modal.dataset.reportId) : null;
+        if (!reportId) { alert('Ошибка: ID отчета не найден'); return; }
+        
+        this.closeReportEditActionModal();
+        try {
+            const res = await fetch('/api/reports');
+            const reports = await res.json();
+            const report = reports.find(r => r.id === reportId);
+            if (!report) { alert('Отчет не найден'); return; }
+
+            const title = prompt('Название:', report.title);
+            if (title === null) return;
+            const description = prompt('Описание:', report.description || '');
+            if (description === null) return;
+
+            const updateRes = await fetch(`/api/reports/${reportId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: title || report.title, description: description || '', report_data: report.report_data || {} })
+            });
+            if (!updateRes.ok) { const e = await updateRes.json(); throw new Error(e.error); }
+            this.loadReports();
+            alert('✅ Название и описание обновлены');
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    async openReportDataEditor() {
+        const modal = document.getElementById('report-edit-action-modal');
+        const reportId = modal ? parseInt(modal.dataset.reportId) : null;
+        if (!reportId) { alert('Ошибка: ID отчета не найден'); return; }
+
+        this.closeReportEditActionModal();
+        document.querySelectorAll('.modal').forEach(m => {
+            if (m.id !== 'report-data-editor-modal') { m.style.display = 'none'; m.classList.remove('active'); }
+        });
+
+        try {
+            const res = await fetch('/api/reports');
+            const reports = await res.json();
+            const report = reports.find(r => r.id === reportId);
+            if (!report) { alert('Отчет не найден'); return; }
+
+            const editorModal = document.getElementById('report-data-editor-modal');
+            const content = document.getElementById('report-data-editor-content');
+            if (!editorModal || !content) { alert('Ошибка: окно редактирования не найдено'); return; }
+
+            editorModal.dataset.reportId = reportId;
+            editorModal.dataset.originalData = JSON.stringify(report.report_data);
+            editorModal.dataset.type = report.report_data?.type || 'tickets';
+
+            content.innerHTML = this.renderReportDataEditor(report);
+            editorModal.style.display = 'flex';
+            editorModal.classList.add('active');
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    renderReportDataEditor(report) {
+        const data = report.report_data || {};
+        const reportType = data.type || 'tickets';
+
+        if (reportType === 'tickets') {
+            const tickets = data.tickets || [];
+            if (!tickets.length) {
+                return `<div class="editor-empty-state">📭 Нет данных для редактирования</div>`;
+            }
+            return `
+                <div class="editor-table-wrapper">
+                    <table class="editor-table">
+                        <thead><tr>
+                            <th>№</th>
+                            <th>Название</th>
+                            <th>Проблема</th>
+                            <th>Создана</th>
+                            <th>Выполнена</th>
+                            <th>Время</th>
+                            <th>Исполнитель</th>
+                            <th>✕</th>
+                        </tr></thead>
+                        <tbody id="report-editor-body">
+                            ${tickets.map((t, i) => `
+                                <tr>
+                                    <td class="editor-col-id">${i+1}</td>
+                                    <td><input type="text" class="editor-input" value="${t.title || ''}" data-field="title"></td>
+                                    <td><input type="text" class="editor-input" value="${t.problem_desc || ''}" data-field="problem_desc"></td>
+                                    <td><input type="text" class="editor-input" value="${t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : ''}" data-field="created_at"></td>
+                                    <td><input type="text" class="editor-input" value="${t.completed_at ? new Date(t.completed_at).toLocaleString('ru-RU') : ''}" data-field="completed_at"></td>
+                                    <td class="editor-col-time">${this.calculateResolutionTime(t.created_at, t.completed_at)}</td>
+                                    <td><input type="text" class="editor-input" value="${t.executor_name || ''}" data-field="executor_name"></td>
+                                    <td class="editor-col-action"><button class="editor-delete-btn" onclick="app.removeReportEditorRow(${i})">✕</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <button class="editor-add-row" onclick="app.addReportEditorRow()">➕ Добавить строку</button>
+                </div>
+            `;
+        }
+
+        if (reportType === 'tasks') {
+            const tasks = data.tasks || [];
+            if (!tasks.length) {
+                return `<div class="editor-empty-state">📭 Нет данных для редактирования</div>`;
+            }
+            return `
+                <div class="editor-table-wrapper">
+                    <table class="editor-table">
+                        <thead><tr>
+                            <th>№</th>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Приоритет</th>
+                            <th>Назначена</th>
+                            <th>Создана</th>
+                            <th>Выполнена</th>
+                            <th>Исполнитель</th>
+                            <th>✕</th>
+                        </tr></thead>
+                        <tbody id="report-editor-body">
+                            ${tasks.map((t, i) => `
+                                <tr>
+                                    <td class="editor-col-id">${i+1}</td>
+                                    <td><input type="text" class="editor-input" value="${t.title || ''}" data-field="title"></td>
+                                    <td><input type="text" class="editor-input" value="${t.description || ''}" data-field="description"></td>
+                                    <td>
+                                        <select class="editor-input" data-field="priority">
+                                            <option value="Низкий" ${t.priority === 'Низкий' ? 'selected' : ''}>🟢 Низкий</option>
+                                            <option value="Средний" ${t.priority === 'Средний' ? 'selected' : ''}>🟡 Средний</option>
+                                            <option value="Высокий" ${t.priority === 'Высокий' ? 'selected' : ''}>🔴 Высокий</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" class="editor-input" value="${t.assigned_to || ''}" data-field="assigned_to"></td>
+                                    <td><input type="text" class="editor-input" value="${t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : ''}" data-field="created_at"></td>
+                                    <td><input type="text" class="editor-input" value="${t.completed_at ? new Date(t.completed_at).toLocaleString('ru-RU') : ''}" data-field="completed_at"></td>
+                                    <td><input type="text" class="editor-input" value="${t.completed_by || ''}" data-field="completed_by"></td>
+                                    <td class="editor-col-action"><button class="editor-delete-btn" onclick="app.removeReportEditorRow(${i})">✕</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <button class="editor-add-row" onclick="app.addReportEditorRow()">➕ Добавить строку</button>
+                </div>
+            `;
+        }
+
+        if (reportType === 'stats') {
+            const stats = data.stats || [];
+            const summary = data.summary || {};
+            if (!stats.length) {
+                return `<div class="editor-empty-state">📭 Нет данных для редактирования</div>`;
+            }
+            return `
+                <div class="editor-table-wrapper">
+                    <div class="stats-summary">
+                        <div class="stat-item"><span>Дней</span><br><strong>${summary.days || 0}</strong></div>
+                        <div class="stat-item"><span>Всего</span><br><strong>${summary.total || 0}</strong></div>
+                        <div class="stat-item"><span>Выполнено</span><br><strong>${summary.completed || 0}</strong></div>
+                        <div class="stat-item"><span>В работе</span><br><strong>${summary.pending || 0}</strong></div>
+                        <div class="stat-item"><span>% выполнения</span><br><strong>${summary.completionRate || 0}%</strong></div>
+                        <div class="stat-item"><span>Среднее время</span><br><strong>${summary.avgSpeed || '—'} ч</strong></div>
+                    </div>
+                    <table class="editor-table">
+                        <thead><tr>
+                            <th>Дата</th>
+                            <th>Всего</th>
+                            <th>Выполнено</th>
+                            <th>В работе</th>
+                            <th>%</th>
+                            <th>Среднее время</th>
+                            <th>✕</th>
+                        </tr></thead>
+                        <tbody id="report-editor-body">
+                            ${stats.map((s, i) => `
+                                <tr>
+                                    <td><input type="text" class="editor-input" value="${s.date || ''}" data-field="date"></td>
+                                    <td><input type="number" class="editor-input editor-number" value="${s.total || 0}" data-field="total"></td>
+                                    <td><input type="number" class="editor-input editor-number" value="${s.completed || 0}" data-field="completed"></td>
+                                    <td><input type="number" class="editor-input editor-number" value="${s.pending || 0}" data-field="pending"></td>
+                                    <td><input type="number" class="editor-input editor-number" value="${s.completionRate || 0}" data-field="completionRate"></td>
+                                    <td><input type="text" class="editor-input" value="${s.avgSpeed || '—'}" data-field="avgSpeed"></td>
+                                    <td class="editor-col-action"><button class="editor-delete-btn" onclick="app.removeReportEditorRow(${i})">✕</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <button class="editor-add-row" onclick="app.addReportEditorRow()">➕ Добавить строку</button>
+                </div>
+            `;
+        }
+
+        return `<div class="editor-empty-state">📭 Неизвестный тип отчета</div>`;
+    },
+
+    calculateResolutionTime(created, completed) {
+        if (!created || !completed) return '—';
+        try {
+            const diff = (new Date(completed) - new Date(created)) / (1000 * 60 * 60);
+            if (diff <= 0) return '—';
+            const h = Math.floor(diff);
+            const m = Math.round((diff - h) * 60);
+            return h > 0 ? `${h}ч ${m}м` : `${m}м`;
+        } catch (e) { return '—'; }
+    },
+
+    addReportEditorRow() {
+        const tbody = document.getElementById('report-editor-body');
+        if (!tbody) return;
+        
+        const existingRows = tbody.querySelectorAll('tr');
+        const templateRow = existingRows[0];
+        if (!templateRow) {
+            const newRow = document.createElement('tr');
+            const modal = document.getElementById('report-data-editor-modal');
+            const reportType = modal ? modal.dataset.type : 'tickets';
+            
+            let cols = 0;
+            if (reportType === 'tickets') cols = 8;
+            else if (reportType === 'tasks') cols = 9;
+            else if (reportType === 'stats') cols = 7;
+            else cols = 7;
+            
+            for (let i = 0; i < cols - 1; i++) {
+                const td = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = '';
+                input.dataset.field = 'field_' + i;
+                td.appendChild(input);
+                newRow.appendChild(td);
+            }
+            const deleteTd = document.createElement('td');
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '✕';
+            deleteBtn.onclick = () => newRow.remove();
+            deleteTd.appendChild(deleteBtn);
+            newRow.appendChild(deleteTd);
+            tbody.appendChild(newRow);
+            return;
+        }
+        
+        const cells = templateRow.querySelectorAll('td');
+        const newRow = document.createElement('tr');
+        
+        for (let i = 0; i < cells.length - 1; i++) {
+            const td = document.createElement('td');
+            const existingInput = cells[i].querySelector('input, select');
+            if (existingInput) {
+                const input = document.createElement(existingInput.tagName.toLowerCase());
+                if (existingInput.tagName === 'SELECT') {
+                    input.innerHTML = existingInput.innerHTML;
+                    input.value = existingInput.value;
+                } else {
+                    input.type = existingInput.type || 'text';
+                    input.value = '';
+                }
+                input.dataset.field = existingInput.dataset.field || '';
+                td.appendChild(input);
+            } else {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = '';
+                input.dataset.field = 'field_' + i;
+                td.appendChild(input);
+            }
+            newRow.appendChild(td);
+        }
+        
+        const deleteTd = document.createElement('td');
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '✕';
+        deleteBtn.onclick = () => newRow.remove();
+        deleteTd.appendChild(deleteBtn);
+        newRow.appendChild(deleteTd);
+        tbody.appendChild(newRow);
+    },
+
+    removeReportEditorRow(index) {
+        if (!confirm('Удалить строку?')) return;
+        const rows = document.querySelectorAll('#report-editor-body tr');
+        if (rows[index]) rows[index].remove();
+    },
+
+    async saveReportDataChanges() {
+        const modal = document.getElementById('report-data-editor-modal');
+        const reportId = modal ? parseInt(modal.dataset.reportId) : null;
+        const reportType = modal ? modal.dataset.type : 'tickets';
+        if (!reportId) { alert('Ошибка: ID отчета не найден'); return; }
+
+        try {
+            const rows = document.querySelectorAll('#report-editor-body tr');
+            const items = [];
+            
+            rows.forEach((row, i) => {
+                const inputs = row.querySelectorAll('input, select');
+                const data = {};
+                inputs.forEach(inp => { 
+                    data[inp.dataset.field] = inp.value; 
+                });
+                items.push({ id: row.dataset.id || i, ...data });
+            });
+
+            const res = await fetch('/api/reports');
+            const reports = await res.json();
+            const report = reports.find(r => r.id === reportId);
+            if (!report) { alert('Отчет не найден'); return; }
+
+            const reportData = report.report_data || {};
+            
+            if (reportType === 'tickets') {
+                reportData.tickets = items;
+            } else if (reportType === 'tasks') {
+                reportData.tasks = items;
+            } else if (reportType === 'stats') {
+                const stats = items.map(row => ({
+                    date: row.date || '',
+                    total: parseInt(row.total) || 0,
+                    completed: parseInt(row.completed) || 0,
+                    pending: parseInt(row.pending) || 0,
+                    completionRate: parseInt(row.completionRate) || 0,
+                    avgSpeed: row.avgSpeed || '—'
+                }));
+                
+                const totalAll = stats.reduce((s, d) => s + d.total, 0);
+                const completedAll = stats.reduce((s, d) => s + d.completed, 0);
+                const pendingAll = stats.reduce((s, d) => s + d.pending, 0);
+                
+                reportData.stats = stats;
+                reportData.summary = {
+                    days: stats.length,
+                    total: totalAll,
+                    completed: completedAll,
+                    pending: pendingAll,
+                    avgSpeed: stats.filter(d => d.avgSpeed !== '—').length > 0 
+                        ? (stats.filter(d => d.avgSpeed !== '—').reduce((s, d) => s + parseFloat(d.avgSpeed), 0) / stats.filter(d => d.avgSpeed !== '—').length).toFixed(1)
+                        : '—',
+                    completionRate: totalAll > 0 ? Math.round((completedAll / totalAll) * 100) : 0
+                };
+            }
+
+            const updateRes = await fetch(`/api/reports/${reportId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    title: report.title, 
+                    description: report.description || '', 
+                    report_data: reportData 
+                })
+            });
+            if (!updateRes.ok) { const e = await updateRes.json(); throw new Error(e.error); }
+            
+            this.closeReportDataEditor();
+            this.loadReports();
+            alert('✅ Данные сохранены');
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    async restoreReportData() {
+        const modal = document.getElementById('report-data-editor-modal');
+        const reportId = modal ? parseInt(modal.dataset.reportId) : null;
+        if (!reportId) { alert('Ошибка: ID отчета не найден'); return; }
+
+        if (!confirm('Вернуть исходные данные?')) return;
+
+        try {
+            const originalData = JSON.parse(modal.dataset.originalData || '{}');
+
+            const res = await fetch('/api/reports');
+            const reports = await res.json();
+            const report = reports.find(r => r.id === reportId);
+            if (!report) { alert('Отчет не найден'); return; }
+
+            const updateRes = await fetch(`/api/reports/${reportId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: report.title, description: report.description || '', report_data: originalData })
+            });
+            if (!updateRes.ok) { const e = await updateRes.json(); throw new Error(e.error); }
+            this.closeReportDataEditor();
+            this.loadReports();
+            alert('✅ Исходные данные восстановлены');
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    closeReportDataEditor() {
+        const modal = document.getElementById('report-data-editor-modal');
+        if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); }
     },
 
     async viewReport(reportId) {
@@ -1406,21 +2008,21 @@ const app = {
             let tableHtml = '';
             if (reportType === 'tickets' && tickets.length) {
                 tableHtml = `
-                    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:24px;overflow-x:auto;">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
-                            <div style="display:flex;gap:16px;flex-wrap:wrap;"><span style="font-size:13px;color:#718096;">📋 Архив заявок</span><span style="font-size:13px;color:#718096;">📅 ${new Date(report.created_at).toLocaleString('ru-RU')}</span></div>
-                            <span style="font-size:13px;font-weight:600;color:#4a9eff;">Всего: ${tickets.length}</span>
+                    <div class="report-view-block">
+                        <div class="report-view-header">
+                            <div><span>📋 Архив заявок</span><span>📅 ${new Date(report.created_at).toLocaleString('ru-RU')}</span></div>
+                            <span>Всего: ${tickets.length}</span>
                         </div>
-                        ${report.description ? `<p style="padding:10px 14px;background:#f7fafc;border-radius:6px;border-left:3px solid #4a9eff;margin-bottom:12px;">${report.description}</p>` : ''}
-                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                            <thead><tr style="background:#f7fafc;border-bottom:2px solid #e2e8f0;">
-                                <th style="padding:8px 12px;">№</th>
-                                <th style="padding:8px 12px;">Название</th>
-                                <th style="padding:8px 12px;">Проблема</th>
-                                <th style="padding:8px 12px;">Создана</th>
-                                <th style="padding:8px 12px;">Выполнена</th>
-                                <th style="padding:8px 12px;">Время</th>
-                                <th style="padding:8px 12px;">Исполнитель</th>
+                        ${report.description ? `<p class="report-view-desc">${report.description}</p>` : ''}
+                        <table class="report-view-table">
+                            <thead><tr>
+                                <th>№</th>
+                                <th>Название</th>
+                                <th>Проблема</th>
+                                <th>Создана</th>
+                                <th>Выполнена</th>
+                                <th>Время</th>
+                                <th>Исполнитель</th>
                             </tr></thead>
                             <tbody>${tickets.map((t, i) => {
                                 let time = '—';
@@ -1428,14 +2030,14 @@ const app = {
                                     const diff = (new Date(t.completed_at) - new Date(t.created_at)) / (1000 * 60 * 60);
                                     if (diff > 0) { const h = Math.floor(diff); const m = Math.round((diff - h) * 60); time = `${h}ч ${m}м`; }
                                 }
-                                return `<tr style="border-bottom:1px solid #e2e8f0;">
-                                    <td style="padding:8px 12px;text-align:center;">${i+1}</td>
-                                    <td style="padding:8px 12px;font-weight:500;">${t.title || '—'}</td>
-                                    <td style="padding:8px 12px;">${t.problem_desc || '—'}</td>
-                                    <td style="padding:8px 12px;font-size:12px;white-space:nowrap;">${t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—'}</td>
-                                    <td style="padding:8px 12px;font-size:12px;white-space:nowrap;">${t.completed_at ? new Date(t.completed_at).toLocaleString('ru-RU') : '—'}</td>
-                                    <td style="padding:8px 12px;font-weight:600;text-align:center;">${time}</td>
-                                    <td style="padding:8px 12px;">${t.executor_name || '—'}</td>
+                                return `<tr>
+                                    <td>${i+1}</td>
+                                    <td>${t.title || '—'}</td>
+                                    <td>${t.problem_desc || '—'}</td>
+                                    <td>${t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—'}</td>
+                                    <td>${t.completed_at ? new Date(t.completed_at).toLocaleString('ru-RU') : '—'}</td>
+                                    <td>${time}</td>
+                                    <td>${t.executor_name || '—'}</td>
                                 </tr>`;
                             }).join('')}</tbody>
                         </table>
@@ -1443,33 +2045,33 @@ const app = {
                 `;
             } else if (reportType === 'tasks' && tasks.length) {
                 tableHtml = `
-                    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:24px;overflow-x:auto;">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
-                            <div style="display:flex;gap:16px;flex-wrap:wrap;"><span style="font-size:13px;color:#718096;">✅ Архив задач</span><span style="font-size:13px;color:#718096;">📅 ${new Date(report.created_at).toLocaleString('ru-RU')}</span></div>
-                            <span style="font-size:13px;font-weight:600;color:#4a9eff;">Всего: ${tasks.length}</span>
+                    <div class="report-view-block">
+                        <div class="report-view-header">
+                            <div><span>✅ Архив задач</span><span>📅 ${new Date(report.created_at).toLocaleString('ru-RU')}</span></div>
+                            <span>Всего: ${tasks.length}</span>
                         </div>
-                        ${report.description ? `<p style="padding:10px 14px;background:#f7fafc;border-radius:6px;border-left:3px solid #4a9eff;margin-bottom:12px;">${report.description}</p>` : ''}
-                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                            <thead><tr style="background:#f7fafc;border-bottom:2px solid #e2e8f0;">
-                                <th style="padding:8px 12px;">№</th>
-                                <th style="padding:8px 12px;">Название</th>
-                                <th style="padding:8px 12px;">Описание</th>
-                                <th style="padding:8px 12px;">Приоритет</th>
-                                <th style="padding:8px 12px;">Назначена</th>
-                                <th style="padding:8px 12px;">Создана</th>
-                                <th style="padding:8px 12px;">Выполнена</th>
-                                <th style="padding:8px 12px;">Исполнитель</th>
+                        ${report.description ? `<p class="report-view-desc">${report.description}</p>` : ''}
+                        <table class="report-view-table">
+                            <thead><tr>
+                                <th>№</th>
+                                <th>Название</th>
+                                <th>Описание</th>
+                                <th>Приоритет</th>
+                                <th>Назначена</th>
+                                <th>Создана</th>
+                                <th>Выполнена</th>
+                                <th>Исполнитель</th>
                             </tr></thead>
                             <tbody>${tasks.map((t, i) => `
-                                <tr style="border-bottom:1px solid #e2e8f0;">
-                                    <td style="padding:8px 12px;text-align:center;">${i+1}</td>
-                                    <td style="padding:8px 12px;font-weight:500;">${t.title || '—'}</td>
-                                    <td style="padding:8px 12px;">${t.description || '—'}</td>
-                                    <td style="padding:8px 12px;font-weight:600;">${t.priority || '—'}</td>
-                                    <td style="padding:8px 12px;">${t.assigned_to || '—'}</td>
-                                    <td style="padding:8px 12px;font-size:12px;white-space:nowrap;">${t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—'}</td>
-                                    <td style="padding:8px 12px;font-size:12px;white-space:nowrap;">${t.completed_at ? new Date(t.completed_at).toLocaleString('ru-RU') : '—'}</td>
-                                    <td style="padding:8px 12px;">${t.completed_by || '—'}</td>
+                                <tr>
+                                    <td>${i+1}</td>
+                                    <td>${t.title || '—'}</td>
+                                    <td>${t.description || '—'}</td>
+                                    <td>${t.priority || '—'}</td>
+                                    <td>${t.assigned_to || '—'}</td>
+                                    <td>${t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—'}</td>
+                                    <td>${t.completed_at ? new Date(t.completed_at).toLocaleString('ru-RU') : '—'}</td>
+                                    <td>${t.completed_by || '—'}</td>
                                 </tr>
                             `).join('')}</tbody>
                         </table>
@@ -1477,57 +2079,43 @@ const app = {
                 `;
             } else if (reportType === 'stats' && stats.length) {
                 tableHtml = `
-                    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:24px;overflow-x:auto;">
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;">
-                            <div style="background:#f0f4f8;border-radius:8px;padding:16px;text-align:center;border:1px solid #e2e8f0;">
-                                <div style="font-size:24px;font-weight:700;color:#4a9eff;">${summary.days || 0}</div>
-                                <div style="font-size:12px;color:#718096;">Дней</div>
-                            </div>
-                            <div style="background:#f0f4f8;border-radius:8px;padding:16px;text-align:center;border:1px solid #e2e8f0;">
-                                <div style="font-size:24px;font-weight:700;color:#4a9eff;">${summary.total || 0}</div>
-                                <div style="font-size:12px;color:#718096;">Всего</div>
-                            </div>
-                            <div style="background:#f0f4f8;border-radius:8px;padding:16px;text-align:center;border:1px solid #e2e8f0;">
-                                <div style="font-size:24px;font-weight:700;color:#33dd88;">${summary.completed || 0}</div>
-                                <div style="font-size:12px;color:#718096;">Выполнено</div>
-                            </div>
-                            <div style="background:#f0f4f8;border-radius:8px;padding:16px;text-align:center;border:1px solid #e2e8f0;">
-                                <div style="font-size:24px;font-weight:700;color:#ffaa33;">${summary.pending || 0}</div>
-                                <div style="font-size:12px;color:#718096;">В работе</div>
-                            </div>
-                            <div style="background:#f0f4f8;border-radius:8px;padding:16px;text-align:center;border:1px solid #e2e8f0;">
-                                <div style="font-size:24px;font-weight:700;color:#ff3355;">${summary.completionRate || 0}%</div>
-                                <div style="font-size:12px;color:#718096;">% выполнения</div>
-                            </div>
-                            <div style="background:#f0f4f8;border-radius:8px;padding:16px;text-align:center;border:1px solid #e2e8f0;">
-                                <div style="font-size:24px;font-weight:700;color:#9b59b6;">${summary.avgSpeed || '—'} ч</div>
-                                <div style="font-size:12px;color:#718096;">Среднее время</div>
-                            </div>
+                    <div class="report-view-block">
+                        <div class="report-view-header">
+                            <div><span>📊 Статистика</span><span>📅 ${new Date(report.created_at).toLocaleString('ru-RU')}</span></div>
+                            <span>Всего дней: ${summary.days || 0}</span>
                         </div>
-                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                            <thead><tr style="background:#f7fafc;border-bottom:2px solid #e2e8f0;">
-                                <th style="padding:10px 14px;">Дата</th>
-                                <th style="padding:10px 14px;text-align:center;">Всего</th>
-                                <th style="padding:10px 14px;text-align:center;">Выполнено</th>
-                                <th style="padding:10px 14px;text-align:center;">В работе</th>
-                                <th style="padding:10px 14px;text-align:center;">%</th>
-                                <th style="padding:10px 14px;text-align:center;">Среднее время</th>
+                        ${report.description ? `<p class="report-view-desc">${report.description}</p>` : ''}
+                        <div class="stats-summary-view">
+                            <div><span>Всего</span><br><strong>${summary.total || 0}</strong></div>
+                            <div><span>Выполнено</span><br><strong class="text-success">${summary.completed || 0}</strong></div>
+                            <div><span>В работе</span><br><strong class="text-warning">${summary.pending || 0}</strong></div>
+                            <div><span>% выполнения</span><br><strong class="text-danger">${summary.completionRate || 0}%</strong></div>
+                            <div><span>Среднее время</span><br><strong>${summary.avgSpeed || '—'} ч</strong></div>
+                        </div>
+                        <table class="report-view-table">
+                            <thead><tr>
+                                <th>Дата</th>
+                                <th>Всего</th>
+                                <th>Выполнено</th>
+                                <th>В работе</th>
+                                <th>%</th>
+                                <th>Среднее время</th>
                             </tr></thead>
                             <tbody>${stats.map(s => `
-                                <tr style="border-bottom:1px solid #e2e8f0;">
-                                    <td style="padding:10px 14px;font-weight:500;">${s.date}</td>
-                                    <td style="padding:10px 14px;text-align:center;">${s.total}</td>
-                                    <td style="padding:10px 14px;text-align:center;color:#33dd88;font-weight:600;">${s.completed}</td>
-                                    <td style="padding:10px 14px;text-align:center;color:#ffaa33;font-weight:600;">${s.pending}</td>
-                                    <td style="padding:10px 14px;text-align:center;font-weight:700;color:${s.completionRate >= 80 ? '#33dd88' : s.completionRate >= 50 ? '#ffaa33' : '#ff3355'};">${s.completionRate}%</td>
-                                    <td style="padding:10px 14px;text-align:center;">${s.avgSpeed !== '—' ? s.avgSpeed + ' ч' : '—'}</td>
+                                <tr>
+                                    <td>${s.date}</td>
+                                    <td>${s.total}</td>
+                                    <td class="text-success">${s.completed}</td>
+                                    <td class="text-warning">${s.pending}</td>
+                                    <td class="text-danger">${s.completionRate}%</td>
+                                    <td>${s.avgSpeed !== '—' ? s.avgSpeed + ' ч' : '—'}</td>
                                 </tr>
                             `).join('')}</tbody>
                         </table>
                     </div>
                 `;
             } else {
-                tableHtml = `<div style="text-align:center;padding:60px 20px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;"><p style="font-size:18px;color:#718096;">📭 Нет данных</p></div>`;
+                tableHtml = `<div class="report-view-empty">📭 Нет данных</div>`;
             }
 
             content.innerHTML = tableHtml;
@@ -1550,31 +2138,44 @@ const app = {
         this.loadReports();
     },
 
+    async deleteReport(reportId) {
+        if (!confirm('Удалить отчет?')) return;
+        try {
+            const res = await fetch(`/api/reports/${reportId}?admin_role=${this.currentUser?.role}`, { method: 'DELETE' });
+            if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+            this.loadReports();
+            alert('✅ Удалено');
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
     // ============================================================
-    // УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ (ТОЛЬКО ДИРЕКТОР)
+    // УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ
     // ============================================================
 
-    async loadUsers() {
+        async loadUsers() {
         const container = document.getElementById('users-grid');
         if (!container) return;
-        container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Загрузка...</p>';
+        container.innerHTML = '<p class="loading-state">Загрузка...</p>';
         
         if (!this.currentUser || this.currentUser.role !== 'director') {
-            container.innerHTML = '<p style="text-align:center;color:var(--danger);">Доступ только для директора</p>';
+            container.innerHTML = '<p class="error-state">Доступ только для директора</p>';
             return;
         }
 
         try {
             const res = await fetch('/api/users/all');
             const users = await res.json();
-            if (!users.length) {
-                container.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:40px;"><p>👥 Нет пользователей</p></div>`;
+            
+            const activeUsers = users.filter(u => !u.login_id.startsWith('DELETED_'));
+
+            if (!activeUsers.length) {
+                container.innerHTML = `<p class="empty-state" style="padding:20px;">👥 Нет активных пользователей</p>`;
                 return;
             }
             container.innerHTML = `
                 <table class="inv-table">
-                    <thead><tr><th>Логин</th><th>ФИО</th><th>Отдел</th><th>Должность</th><th>Создан</th><th>Кем</th><th style="width:150px;">Действия</th></tr></thead>
-                    <tbody>${users.map(u => `
+                    <thead><tr><th>Логин</th><th>ФИО</th><th>Отдел</th><th>Должность</th><th>Создан</th><th>Кем</th><th>Действия</th></tr></thead>
+                    <tbody>${activeUsers.map(u => `
                         <tr>
                             <td>${u.login_id}</td>
                             <td>${u.full_name}</td>
@@ -1584,13 +2185,59 @@ const app = {
                             <td>${u.created_by_name || '—'}</td>
                             <td>
                                 <button class="btn-edit" onclick="app.openEditUserModal(${u.id})">✏️</button>
-                                <button class="btn-delete-inv" onclick="app.deleteUser(${u.id})">🗑️</button>
+                                <button class="btn-delete-inv" onclick="app.markUserAsDeleted(${u.id})">🗑️</button>
                             </td>
                         </tr>
                     `).join('')}</tbody>
                 </table>
             `;
-        } catch (e) { container.innerHTML = `<p style="color:var(--danger);">Ошибка: ${e.message}</p>`; }
+        } catch (e) { container.innerHTML = `<p class="error-state">Ошибка: ${e.message}</p>`; }
+    },
+
+    async markUserAsDeleted(userId) {
+        if (!confirm('Вы уверены, что хотите удалить этого пользователя? Все его заявки и задачи останутся в архиве.')) return;
+        if (!this.currentUser || this.currentUser.role !== 'director') {
+            alert('Только директор может удалять пользователей');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/users/all');
+            const users = await res.json();
+            const user = users.find(u => u.id === userId);
+            if (!user) { alert('Пользователь не найден'); return; }
+
+            const randomPassword = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+            
+            const updateRes = await fetch(`/api/users/${userId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    full_name: user.full_name, 
+                    department: user.department || '', 
+                    position: user.position || '', 
+                    current_admin_id: this.currentUser.id 
+                })
+            });
+            if (!updateRes.ok) { const e = await updateRes.json(); throw new Error(e.error); }
+
+            const passRes = await fetch(`/api/users/${userId}/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: randomPassword, current_admin_id: this.currentUser.id })
+            });
+            if (!passRes.ok) { const e = await passRes.json(); throw new Error(e.error); }
+
+            // Меняем логин на DELETED_
+            await fetch(`/api/users/${userId}/mark-deleted`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_admin_id: this.currentUser.id })
+            });
+
+            this.loadUsers();
+            alert('✅ Пользователь удален (вход заблокирован, данные сохранены)');
+        } catch (e) { alert('Ошибка: ' + e.message); }
     },
 
     showCreateUserModal() {
@@ -1686,7 +2333,6 @@ const app = {
         if (!full_name) { alert('ФИО обязательно'); return; }
 
         try {
-            // Обновляем данные
             const res1 = await fetch(`/api/users/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -1694,7 +2340,6 @@ const app = {
             });
             if (!res1.ok) { const e = await res1.json(); throw new Error(e.error); }
 
-            // Если пароль указан - меняем
             if (password) {
                 if (password.length < 4) { alert('Пароль минимум 4 символа'); return; }
                 const res2 = await fetch(`/api/users/${id}/password`, {
@@ -1712,70 +2357,98 @@ const app = {
         } catch (e) { alert('Ошибка: ' + e.message); }
     },
 
-    async deleteUser(id) {
-        if (!confirm('Удалить пользователя навсегда?')) return;
-        if (!this.currentUser || this.currentUser.role !== 'director') {
-            alert('Только директор может удалять пользователей');
-            return;
-        }
-
-        try {
-            const res = await fetch(`/api/users/${id}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ current_admin_id: this.currentUser.id })
-            });
-            if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-            this.loadUsers();
-            alert('✅ Пользователь удален');
-        } catch (e) { alert('Ошибка: ' + e.message); }
-    },
-
     // ============================================================
-    // УПРАВЛЕНИЕ АДМИНАМИ (ТОЛЬКО ДИРЕКТОР)
+    // УПРАВЛЕНИЕ АДМИНАМИ
     // ============================================================
 
-    async loadAdminsList() {
+        async loadAdminsList() {
         const container = document.getElementById('admins-grid');
         if (!container) return;
-        container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Загрузка...</p>';
+        container.innerHTML = '<p class="loading-state">Загрузка...</p>';
 
         if (!this.currentUser || this.currentUser.role !== 'director') {
-            container.innerHTML = '<p style="text-align:center;color:var(--danger);">Доступ только для директора</p>';
+            container.innerHTML = '<p class="error-state">Доступ только для директора</p>';
             return;
         }
 
         try {
             const res = await fetch('/api/admins/all');
             const admins = await res.json();
-            if (!admins.length) {
-                container.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:40px;"><p>👑 Нет администраторов</p></div>`;
+            
+            const activeAdmins = admins.filter(a => !a.login_id.startsWith('DELETED_'));
+
+            if (!activeAdmins.length) {
+                container.innerHTML = `<p class="empty-state" style="padding:20px;">👑 Нет активных администраторов</p>`;
                 return;
             }
             const roleLabels = { 'admin': '👤 Админ', 'super_admin': '🛠️ Гл. Админ', 'director': '👑 Директор' };
             container.innerHTML = `
                 <table class="inv-table">
-                    <thead><tr><th>Логин</th><th>ФИО</th><th>Роль</th><th>Телефон</th><th>Цвет</th><th>Создан</th><th>Кем</th><th style="width:150px;">Действия</th></tr></thead>
-                    <tbody>${admins.map(a => `
+                    <thead><tr><th>Логин</th><th>ФИО</th><th>Роль</th><th>Телефон</th><th>Цвет</th><th>Создан</th><th>Кем</th><th>Действия</th></tr></thead>
+                    <tbody>${activeAdmins.map(a => `
                         <tr>
                             <td>${a.login_id}</td>
                             <td>${a.full_name}</td>
                             <td>${roleLabels[a.role] || a.role}</td>
                             <td>${a.phone_number || '—'}</td>
-                            <td><span style="display:inline-block;width:30px;height:30px;border-radius:50%;background:${a.color_theme || '#4a9eff'};border:2px solid #fff;box-shadow:0 0 10px ${a.color_theme || '#4a9eff'}44;"></span></td>
+                            <td><span class="color-indicator" style="background:${a.color_theme || '#4a9eff'};"></span></td>
                             <td>${new Date(a.created_at).toLocaleDateString('ru-RU')}</td>
                             <td>${a.created_by_name || '—'}</td>
                             <td>
                                 ${a.id !== this.currentUser.id ? `
                                     <button class="btn-edit" onclick="app.openEditAdminModal(${a.id})">✏️</button>
-                                    <button class="btn-delete-inv" onclick="app.deleteAdmin(${a.id})">🗑️</button>
+                                    <button class="btn-delete-inv" onclick="app.markAdminAsDeleted(${a.id})">🗑️</button>
                                 ` : '<span style="color:var(--text-muted);">Это вы</span>'}
                             </td>
                         </tr>
                     `).join('')}</tbody>
                 </table>
             `;
-        } catch (e) { container.innerHTML = `<p style="color:var(--danger);">Ошибка: ${e.message}</p>`; }
+        } catch (e) { container.innerHTML = `<p class="error-state">Ошибка: ${e.message}</p>`; }
+    },
+
+    async markAdminAsDeleted(adminId) {
+        if (!confirm('Вы уверены, что хотите удалить этого администратора? Все его задачи и комментарии останутся в архиве.')) return;
+        if (!this.currentUser || this.currentUser.role !== 'director') {
+            alert('Только директор может удалять администраторов');
+            return;
+        }
+        if (adminId == this.currentUser.id) {
+            alert('Нельзя удалить самого себя');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/admins/all');
+            const admins = await res.json();
+            const admin = admins.find(a => a.id === adminId);
+            if (!admin) { alert('Администратор не найден'); return; }
+
+            const randomPassword = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+            
+            const updateRes = await fetch(`/api/admins/${adminId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    full_name: admin.full_name, 
+                    role: admin.role, 
+                    phone_number: admin.phone_number || '', 
+                    color_theme: admin.color_theme || '#4a9eff',
+                    current_admin_id: this.currentUser.id 
+                })
+            });
+            if (!updateRes.ok) { const e = await updateRes.json(); throw new Error(e.error); }
+
+            const passRes = await fetch(`/api/admins/${adminId}/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: randomPassword, current_admin_id: this.currentUser.id })
+            });
+            if (!passRes.ok) { const e = await passRes.json(); throw new Error(e.error); }
+
+            this.loadAdminsList();
+            alert('✅ Администратор удален (вход заблокирован, данные сохранены)');
+        } catch (e) { alert('Ошибка: ' + e.message); }
     },
 
     showCreateAdminModal() {
@@ -1875,7 +2548,6 @@ const app = {
         if (!full_name) { alert('ФИО обязательно'); return; }
 
         try {
-            // Обновляем данные
             const res1 = await fetch(`/api/admins/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -1883,7 +2555,6 @@ const app = {
             });
             if (!res1.ok) { const e = await res1.json(); throw new Error(e.error); }
 
-            // Если пароль указан - меняем
             if (password) {
                 if (password.length < 4) { alert('Пароль минимум 4 символа'); return; }
                 const res2 = await fetch(`/api/admins/${id}/password`, {
@@ -1901,31 +2572,8 @@ const app = {
         } catch (e) { alert('Ошибка: ' + e.message); }
     },
 
-    async deleteAdmin(id) {
-        if (!confirm('Удалить администратора навсегда?')) return;
-        if (!this.currentUser || this.currentUser.role !== 'director') {
-            alert('Только директор может удалять администраторов');
-            return;
-        }
-        if (id == this.currentUser.id) {
-            alert('Нельзя удалить самого себя');
-            return;
-        }
-
-        try {
-            const res = await fetch(`/api/admins/${id}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ current_admin_id: this.currentUser.id })
-            });
-            if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-            this.loadAdminsList();
-            alert('✅ Администратор удален');
-        } catch (e) { alert('Ошибка: ' + e.message); }
-    },
-
     // ============================================================
-    // ИНВЕНТАРЬ (сокращенный)
+    // ИНВЕНТАРЬ
     // ============================================================
 
     async updateInventoryList() {
@@ -1953,13 +2601,13 @@ const app = {
 
             const renderSection = (title, type, data, cols) => {
                 if (!data.length) {
-                    return `<details class="inventory-section" open><summary class="section-header"><span>${title} (0)</span><button class="btn-add-inventory" onclick="app.openInventoryModal('${type}', null, '${type}')">➕ Добавить</button></summary><p style="color:var(--text-muted);padding:40px;text-align:center;">Нет записей</p></details>`;
+                    return `<details class="inventory-section" open><summary class="section-header"><span>${title} (0)</span><button class="btn-add-inventory" onclick="app.openInventoryModal('${type}', null, '${type}')">➕ Добавить</button></summary><p class="empty-state">Нет записей</p></details>`;
                 }
                 return `
                     <details class="inventory-section" open>
                         <summary class="section-header"><span>${title} (${data.length})</span><button class="btn-add-inventory" onclick="app.openInventoryModal('${type}', null, '${type}')">➕ Добавить</button></summary>
                         <div class="table-wrapper"><table class="inv-table">
-                            <thead><tr>${cols.map(c => `<th>${c.label}</th>`).join('')}<th style="width:120px;">Действия</th></tr></thead>
+                            <thead><tr>${cols.map(c => `<th>${c.label}</th>`).join('')}<th>Действия</th></tr></thead>
                             <tbody>${data.map(row => `
                                 <tr>${cols.map(c => `<td title="${row[c.key] || ''}">${row[c.key] || '—'}</td>`).join('')}
                                 <td class="action-buttons">
@@ -1994,14 +2642,14 @@ const app = {
                 ])}
             `;
             setTimeout(() => this.initResizers(), 100);
-        } catch (e) { container.innerHTML = `<p style="color:var(--danger);">Ошибка: ${e.message}</p>`; }
+        } catch (e) { container.innerHTML = `<p class="error-state">Ошибка: ${e.message}</p>`; }
     },
 
     async loadInventory() {
         const container = document.getElementById('inventory-container');
         if (!container) return;
         if (this.searchTimeout) clearTimeout(this.searchTimeout);
-        container.innerHTML = '<p style="text-align:center;color:var(--text-muted);">Загрузка...</p>';
+        container.innerHTML = '<p class="loading-state">Загрузка...</p>';
         await this.updateInventoryList();
     },
 
@@ -2082,6 +2730,341 @@ const app = {
         } catch (e) { alert('Ошибка: ' + e.message); }
     },
 
+    // ============================================================
+    // КОММУТАТОРЫ
+    // ============================================================
+
+    async loadSwitches() {
+        const container = document.getElementById('switches-container');
+        if (!container) return;
+        container.innerHTML = '<p class="loading-state">Загрузка...</p>';
+
+        try {
+            const res = await fetch('/api/switches');
+            const switches = await res.json();
+
+            const statusLabels = {
+                'free': '⚪ Свободен',
+                'active': '🟢 Активен',
+                'dead': '🔴 Не работает',
+                'burnt': '🔥 Сгорел',
+                'reserved': '🟡 Резерв'
+            };
+            const statusColors = {
+                'free': '#6b7280',
+                'active': '#10b981',
+                'dead': '#ef4444',
+                'burnt': '#f97316',
+                'reserved': '#eab308'
+            };
+
+            let html = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+                    <h2 style="color:#fff;font-size:24px;font-weight:700;">🌐 Коммутаторы</h2>
+                    <button class="btn-add-inventory" onclick="app.showCreateSwitchModal()">➕ Добавить коммутатор</button>
+                </div>
+            `;
+
+            if (!switches.length) {
+                html += `<div class="empty-state"><p>🌐 Нет коммутаторов. Добавьте первый.</p></div>`;
+                container.innerHTML = html;
+                return;
+            }
+
+            for (const sw of switches) {
+                html += `
+                    <details class="inventory-section" open style="margin-bottom:16px;">
+                        <summary class="section-header" style="cursor:pointer;">
+                            <span>🌐 ${sw.inventory_number || '—'} — ${sw.model || 'Без модели'} (${sw.location || '—'})</span>
+                            <div style="display:flex;gap:8px;" onclick="event.stopPropagation();">
+                                <button class="btn-edit" onclick="event.preventDefault(); app.showEditSwitchModal(${sw.id})">✏️</button>
+                                <button class="btn-delete-inv" onclick="event.preventDefault(); app.deleteSwitch(${sw.id})">🗑️</button>
+                                <button class="btn-add-inventory" onclick="event.preventDefault(); app.showCreatePortModal(${sw.id})">➕ Порт</button>
+                            </div>
+                        </summary>
+                        <div style="padding:16px 20px;border-top:1px solid var(--border-color);">
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-size:13px;color:var(--text-secondary);margin-bottom:16px;padding:12px;background:var(--bg-primary);border-radius:6px;">
+                                <div>🔧 Модель: <b>${sw.model || '—'}</b></div>
+                                <div>🏭 Производитель: <b>${sw.manufacturer || '—'}</b></div>
+                                <div>🔢 Портов: <b>${sw.ports_count || 0}</b></div>
+                                <div>🌐 IP: <b>${sw.ip || '—'}</b></div>
+                                <div>🔗 MAC: <b>${sw.mac || '—'}</b></div>
+                                <div>📍 Расположение: <b>${sw.location || '—'}</b></div>
+                                <div>🔌 Подключение: <b>${sw.connection_method || '—'}</b></div>
+                                <div>🏷️ S/N: <b>${sw.sn || '—'}</b></div>
+                                ${sw.comment ? `<div style="grid-column:1/-1;">💬 ${sw.comment}</div>` : ''}
+                            </div>
+
+                            <table class="inv-table">
+                                <thead>
+                                    <tr>
+                                        <th>Порт</th>
+                                        <th>Метка</th>
+                                        <th>Куда идёт</th>
+                                        <th>Статус</th>
+                                        <th>Скорость</th>
+                                        <th>VLAN</th>
+                                        <th>Примечание</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${sw.ports && sw.ports.length ? sw.ports.map(p => `
+                                        <tr>
+                                            <td><b>${p.port_number}</b></td>
+                                            <td>${p.port_label || '—'}</td>
+                                            <td>${p.destination || '—'}</td>
+                                            <td><span style="color:${statusColors[p.status] || '#6b7280'};font-weight:700;">${statusLabels[p.status] || p.status}</span></td>
+                                            <td>${p.speed || '—'}</td>
+                                            <td>${p.vlan || '—'}</td>
+                                            <td>${p.comment || '—'}</td>
+                                            <td class="action-buttons">
+                                                <button class="btn-edit" onclick="app.showEditPortModal(${p.id}, ${sw.id})">✏️</button>
+                                                <button class="btn-delete-inv" onclick="app.deletePort(${p.id}, ${sw.id})">🗑️</button>
+                                            </td>
+                                        </tr>
+                                    `).join('') : `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">Портов нет. Добавьте первый порт.</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                `;
+            }
+
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = `<p class="error-state">Ошибка: ${e.message}</p>`;
+        }
+    },
+
+    showCreateSwitchModal() {
+        const modalHtml = `
+            <div id="switch-modal" class="modal active" style="display:flex;">
+                <div class="modal-content" style="max-width:600px;">
+                    <span class="close-modal" onclick="app.closeSwitchModal()">&times;</span>
+                    <h2>🌐 Добавить коммутатор</h2>
+                    <input type="hidden" id="switch-edit-id">
+                    <div class="form-group"><label>Инвентарный номер</label><input type="text" id="switch-inventory" placeholder="NC-NE..."></div>
+                    <div class="form-group"><label>Модель</label><input type="text" id="switch-model" placeholder="D-Link DGS-1210"></div>
+                    <div class="form-group"><label>Производитель</label><input type="text" id="switch-manufacturer"></div>
+                    <div class="form-group"><label>Количество портов</label><input type="number" id="switch-ports-count" value="24"></div>
+                    <div class="form-group"><label>IP-адрес</label><input type="text" id="switch-ip"></div>
+                    <div class="form-group"><label>MAC-адрес</label><input type="text" id="switch-mac"></div>
+                    <div class="form-group"><label>Расположение</label><input type="text" id="switch-location"></div>
+                    <div class="form-group"><label>Метод подключения</label><input type="text" id="switch-connection"></div>
+                    <div class="form-group"><label>S/N</label><input type="text" id="switch-sn"></div>
+                    <div class="form-group"><label>Примечание</label><textarea id="switch-comment" rows="3"></textarea></div>
+                    <div class="modal-buttons">
+                        <button class="btn-save" onclick="app.saveSwitch()">💾 Сохранить</button>
+                        <button class="btn-cancel" onclick="app.closeSwitchModal()">❌ Отмена</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    async showEditSwitchModal(id) {
+        try {
+            const res = await fetch('/api/switches');
+            const switches = await res.json();
+            const sw = switches.find(s => s.id === id);
+            if (!sw) { alert('Коммутатор не найден'); return; }
+
+            const modalHtml = `
+                <div id="switch-modal" class="modal active" style="display:flex;">
+                    <div class="modal-content" style="max-width:600px;">
+                        <span class="close-modal" onclick="app.closeSwitchModal()">&times;</span>
+                        <h2>✏️ Редактировать коммутатор</h2>
+                        <input type="hidden" id="switch-edit-id" value="${sw.id}">
+                        <div class="form-group"><label>Инвентарный номер</label><input type="text" id="switch-inventory" value="${sw.inventory_number || ''}"></div>
+                        <div class="form-group"><label>Модель</label><input type="text" id="switch-model" value="${sw.model || ''}"></div>
+                        <div class="form-group"><label>Производитель</label><input type="text" id="switch-manufacturer" value="${sw.manufacturer || ''}"></div>
+                        <div class="form-group"><label>Количество портов</label><input type="number" id="switch-ports-count" value="${sw.ports_count || 0}"></div>
+                        <div class="form-group"><label>IP-адрес</label><input type="text" id="switch-ip" value="${sw.ip || ''}"></div>
+                        <div class="form-group"><label>MAC-адрес</label><input type="text" id="switch-mac" value="${sw.mac || ''}"></div>
+                        <div class="form-group"><label>Расположение</label><input type="text" id="switch-location" value="${sw.location || ''}"></div>
+                        <div class="form-group"><label>Метод подключения</label><input type="text" id="switch-connection" value="${sw.connection_method || ''}"></div>
+                        <div class="form-group"><label>S/N</label><input type="text" id="switch-sn" value="${sw.sn || ''}"></div>
+                        <div class="form-group"><label>Примечание</label><textarea id="switch-comment" rows="3">${sw.comment || ''}</textarea></div>
+                        <div class="modal-buttons">
+                            <button class="btn-save" onclick="app.saveSwitch()">💾 Сохранить</button>
+                            <button class="btn-cancel" onclick="app.closeSwitchModal()">❌ Отмена</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    closeSwitchModal() {
+        const modal = document.getElementById('switch-modal');
+        if (modal) modal.remove();
+    },
+
+    async saveSwitch() {
+        const id = document.getElementById('switch-edit-id')?.value;
+        const data = {
+            inventory_number: document.getElementById('switch-inventory')?.value.trim(),
+            model: document.getElementById('switch-model')?.value.trim(),
+            manufacturer: document.getElementById('switch-manufacturer')?.value.trim(),
+            ports_count: parseInt(document.getElementById('switch-ports-count')?.value) || 0,
+            ip: document.getElementById('switch-ip')?.value.trim(),
+            mac: document.getElementById('switch-mac')?.value.trim(),
+            location: document.getElementById('switch-location')?.value.trim(),
+            connection_method: document.getElementById('switch-connection')?.value.trim(),
+            sn: document.getElementById('switch-sn')?.value.trim(),
+            comment: document.getElementById('switch-comment')?.value.trim()
+        };
+
+        try {
+            const url = id ? `/api/switches/${id}` : '/api/switches';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+            this.closeSwitchModal();
+            this.loadSwitches();
+            alert('✅ Сохранено');
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    async deleteSwitch(id) {
+        if (!confirm('Удалить коммутатор и все его порты?')) return;
+        try {
+            const res = await fetch(`/api/switches/${id}`, { method: 'DELETE' });
+            if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+            this.loadSwitches();
+            alert('✅ Удалено');
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    showCreatePortModal(switchId) {
+        const modalHtml = `
+            <div id="port-modal" class="modal active" style="display:flex;">
+                <div class="modal-content" style="max-width:500px;">
+                    <span class="close-modal" onclick="app.closePortModal()">&times;</span>
+                    <h2>🔌 Добавить порт</h2>
+                    <input type="hidden" id="port-switch-id" value="${switchId}">
+                    <input type="hidden" id="port-edit-id">
+                    <div class="form-group"><label>Номер порта *</label><input type="number" id="port-number" required></div>
+                    <div class="form-group"><label>Метка порта</label><input type="text" id="port-label" placeholder="Gi0/1"></div>
+                    <div class="form-group"><label>Куда идёт</label><input type="text" id="port-destination" placeholder="Кабинет 310 / ПК Иванова"></div>
+                    <div class="form-group"><label>Статус</label>
+                        <select id="port-status">
+                            <option value="free">⚪ Свободен</option>
+                            <option value="active">🟢 Активен</option>
+                            <option value="dead">🔴 Не работает</option>
+                            <option value="burnt">🔥 Сгорел</option>
+                            <option value="reserved">🟡 Резерв</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Скорость</label><input type="text" id="port-speed" placeholder="100M / 1G / 10G"></div>
+                    <div class="form-group"><label>VLAN</label><input type="text" id="port-vlan"></div>
+                    <div class="form-group"><label>Примечание</label><textarea id="port-comment" rows="2"></textarea></div>
+                    <div class="modal-buttons">
+                        <button class="btn-save" onclick="app.savePort()">💾 Сохранить</button>
+                        <button class="btn-cancel" onclick="app.closePortModal()">❌ Отмена</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    async showEditPortModal(portId, switchId) {
+        try {
+            const res = await fetch('/api/switches');
+            const switches = await res.json();
+            const sw = switches.find(s => s.id === switchId);
+            if (!sw) { alert('Коммутатор не найден'); return; }
+            const port = sw.ports.find(p => p.id === portId);
+            if (!port) { alert('Порт не найден'); return; }
+
+            const modalHtml = `
+                <div id="port-modal" class="modal active" style="display:flex;">
+                    <div class="modal-content" style="max-width:500px;">
+                        <span class="close-modal" onclick="app.closePortModal()">&times;</span>
+                        <h2>✏️ Редактировать порт</h2>
+                        <input type="hidden" id="port-switch-id" value="${switchId}">
+                        <input type="hidden" id="port-edit-id" value="${port.id}">
+                        <div class="form-group"><label>Номер порта *</label><input type="number" id="port-number" value="${port.port_number}" required></div>
+                        <div class="form-group"><label>Метка порта</label><input type="text" id="port-label" value="${port.port_label || ''}"></div>
+                        <div class="form-group"><label>Куда идёт</label><input type="text" id="port-destination" value="${port.destination || ''}"></div>
+                        <div class="form-group"><label>Статус</label>
+                            <select id="port-status">
+                                <option value="free" ${port.status === 'free' ? 'selected' : ''}>⚪ Свободен</option>
+                                <option value="active" ${port.status === 'active' ? 'selected' : ''}>🟢 Активен</option>
+                                <option value="dead" ${port.status === 'dead' ? 'selected' : ''}>🔴 Не работает</option>
+                                <option value="burnt" ${port.status === 'burnt' ? 'selected' : ''}>🔥 Сгорел</option>
+                                <option value="reserved" ${port.status === 'reserved' ? 'selected' : ''}>🟡 Резерв</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Скорость</label><input type="text" id="port-speed" value="${port.speed || ''}"></div>
+                        <div class="form-group"><label>VLAN</label><input type="text" id="port-vlan" value="${port.vlan || ''}"></div>
+                        <div class="form-group"><label>Примечание</label><textarea id="port-comment" rows="2">${port.comment || ''}</textarea></div>
+                        <div class="modal-buttons">
+                            <button class="btn-save" onclick="app.savePort()">💾 Сохранить</button>
+                            <button class="btn-cancel" onclick="app.closePortModal()">❌ Отмена</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    closePortModal() {
+        const modal = document.getElementById('port-modal');
+        if (modal) modal.remove();
+    },
+
+    async savePort() {
+        const switchId = document.getElementById('port-switch-id')?.value;
+        const portId = document.getElementById('port-edit-id')?.value;
+        const data = {
+            port_number: parseInt(document.getElementById('port-number')?.value) || 0,
+            port_label: document.getElementById('port-label')?.value.trim(),
+            destination: document.getElementById('port-destination')?.value.trim(),
+            status: document.getElementById('port-status')?.value,
+            speed: document.getElementById('port-speed')?.value.trim(),
+            vlan: document.getElementById('port-vlan')?.value.trim(),
+            comment: document.getElementById('port-comment')?.value.trim()
+        };
+
+        try {
+            const url = portId ? `/api/switch-ports/${portId}` : `/api/switches/${switchId}/ports`;
+            const method = portId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+            this.closePortModal();
+            this.loadSwitches();
+            alert('✅ Сохранено');
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    async deletePort(portId, switchId) {
+        if (!confirm('Удалить порт?')) return;
+        try {
+            const res = await fetch(`/api/switch-ports/${portId}`, { method: 'DELETE' });
+            if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+            this.loadSwitches();
+            alert('✅ Удалено');
+        } catch (e) { alert('Ошибка: ' + e.message); }
+    },
+
+    // ============================================================
+    // РЕСАЙЗЕРЫ
+    // ============================================================
+
     initResizers() {
         document.querySelectorAll('.inv-table').forEach(table => {
             table.querySelectorAll('.resizer').forEach(resizer => {
@@ -2126,10 +3109,6 @@ const app = {
         document.addEventListener('mouseup', onMouseUp);
     },
 
-    // ============================================================
-    // КЛАВИАТУРНЫЕ КОМБИНАЦИИ
-    // ============================================================
-
     initKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
             if (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') {
@@ -2154,7 +3133,6 @@ const app = {
     }
 };
 
-// Инициализация
 console.log('🚀 IT Portal загружен');
 console.log('🔑 S+K — вход администратора');
 console.log('📋 Тестовый логин: dmitry / 123456 (директор)');

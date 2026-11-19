@@ -34,6 +34,11 @@ app.post('/api/admins/login', async (req, res) => {
             return res.status(401).json({ error: 'Администратор не найден' });
         }
         const admin = result.rows[0];
+        
+        if (admin.login_id.startsWith('DELETED_')) {
+            return res.status(403).json({ error: 'Учетная запись удалена, вход запрещен' });
+        }
+
         const valid = await bcrypt.compare(password, admin.password_hash);
         if (!valid) {
             return res.status(401).json({ error: 'Неверный пароль' });
@@ -59,6 +64,11 @@ app.post('/api/users/login', async (req, res) => {
             return res.status(401).json({ error: 'Пользователь не найден' });
         }
         const user = result.rows[0];
+        
+        if (user.login_id.startsWith('DELETED_')) {
+            return res.status(403).json({ error: 'Учетная запись удалена, вход запрещен' });
+        }
+
         const valid = await bcrypt.compare(password, user.password_hash);
         if (!valid) {
             return res.status(401).json({ error: 'Неверный пароль' });
@@ -588,6 +598,12 @@ app.get('/api/tasks/archive', async (req, res) => {
 app.post('/api/tasks', async (req, res) => {
     const { title, description, assigned_to, priority, due_date, created_by } = req.body;
     if (!title || title.trim().length === 0) return res.status(400).json({ error: 'Название задачи обязательно' });
+    
+    const adminCheck = await pool.query('SELECT id FROM admins WHERE id = $1', [created_by]);
+    if (adminCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'Только администраторы могут создавать задачи' });
+    }
+    
     try {
         const result = await pool.query(
             `INSERT INTO tasks (title, description, assigned_to, created_by, priority, due_date)
@@ -656,6 +672,64 @@ app.delete('/api/tasks/:id', async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error('❌ Ошибка удаления задачи:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================================
+// КОММЕНТАРИИ К ЗАДАЧАМ
+// ============================================================
+
+app.get('/api/tasks/:id/comments', async (req, res) => {
+    const taskId = req.params.id;
+    try {
+        const result = await pool.query(
+            `SELECT c.*, 
+                    a.full_name as admin_name, 
+                    a.role as admin_role,
+                    u.full_name as user_name
+             FROM task_comments c
+             LEFT JOIN admins a ON c.admin_id = a.id
+             LEFT JOIN users u ON c.user_id = u.id
+             WHERE c.task_id = $1
+             ORDER BY c.created_at ASC`,
+            [taskId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('❌ Ошибка загрузки комментариев:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/tasks/:id/comments', async (req, res) => {
+    const taskId = req.params.id;
+    const { comment_text, admin_id, user_id } = req.body;
+    
+    if (!comment_text || comment_text.trim().length === 0) {
+        return res.status(400).json({ error: 'Комментарий не может быть пустым' });
+    }
+
+    try {
+        const taskCheck = await pool.query('SELECT id FROM tasks WHERE id = $1', [taskId]);
+        if (taskCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Задача не найдена' });
+        }
+
+        let userId = null;
+        let adminId = null;
+        if (admin_id) adminId = admin_id;
+        else if (user_id) userId = user_id;
+        else return res.status(400).json({ error: 'Не указан автор' });
+
+        const result = await pool.query(
+            `INSERT INTO task_comments (task_id, admin_id, user_id, comment_text)
+             VALUES ($1, $2, $3, $4) RETURNING id`,
+            [taskId, adminId, userId, comment_text.trim()]
+        );
+        res.json({ success: true, commentId: result.rows[0].id });
+    } catch (err) {
+        console.error('❌ Ошибка добавления комментария:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -796,6 +870,113 @@ app.delete('/api/inventory/:type/:id', async (req, res) => {
         await pool.query(`DELETE FROM inventory_${req.params.type} WHERE id = $1`, [req.params.id]);
         res.json({ success: true });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================================
+// КОММУТАТОРЫ
+// ============================================================
+
+app.get('/api/switches', async (req, res) => {
+    try {
+        const switchesRes = await pool.query('SELECT * FROM switches ORDER BY inventory_number');
+        const switches = switchesRes.rows;
+
+        for (const sw of switches) {
+            const portsRes = await pool.query(
+                'SELECT * FROM switch_ports WHERE switch_id = $1 ORDER BY port_number',
+                [sw.id]
+            );
+            sw.ports = portsRes.rows;
+        }
+
+        res.json(switches);
+    } catch (err) {
+        console.error('❌ Ошибка загрузки коммутаторов:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/switches', async (req, res) => {
+    const { inventory_number, model, manufacturer, ports_count, ip, mac, location, connection_method, sn, comment } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO switches (inventory_number, model, manufacturer, ports_count, ip, mac, location, connection_method, sn, comment)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+            [inventory_number, model, manufacturer, ports_count || 0, ip, mac, location, connection_method, sn, comment]
+        );
+        res.json({ success: true, switch: result.rows[0] });
+    } catch (err) {
+        console.error('❌ Ошибка создания коммутатора:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/switches/:id', async (req, res) => {
+    const { inventory_number, model, manufacturer, ports_count, ip, mac, location, connection_method, sn, comment } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE switches SET inventory_number = $1, model = $2, manufacturer = $3, ports_count = $4,
+             ip = $5, mac = $6, location = $7, connection_method = $8, sn = $9, comment = $10
+             WHERE id = $11 RETURNING *`,
+            [inventory_number, model, manufacturer, ports_count || 0, ip, mac, location, connection_method, sn, comment, req.params.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Коммутатор не найден' });
+        res.json({ success: true, switch: result.rows[0] });
+    } catch (err) {
+        console.error('❌ Ошибка обновления коммутатора:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/switches/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM switches WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('❌ Ошибка удаления коммутатора:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/switches/:id/ports', async (req, res) => {
+    const { port_number, port_label, destination, status, speed, vlan, comment } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO switch_ports (switch_id, port_number, port_label, destination, status, speed, vlan, comment)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [req.params.id, port_number, port_label, destination, status || 'free', speed, vlan, comment]
+        );
+        res.json({ success: true, port: result.rows[0] });
+    } catch (err) {
+        console.error('❌ Ошибка добавления порта:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/switch-ports/:id', async (req, res) => {
+    const { port_number, port_label, destination, status, speed, vlan, comment } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE switch_ports SET port_number = $1, port_label = $2, destination = $3, status = $4,
+             speed = $5, vlan = $6, comment = $7 WHERE id = $8 RETURNING *`,
+            [port_number, port_label, destination, status, speed, vlan, comment, req.params.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Порт не найден' });
+        res.json({ success: true, port: result.rows[0] });
+    } catch (err) {
+        console.error('❌ Ошибка обновления порта:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/switch-ports/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM switch_ports WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('❌ Ошибка удаления порта:', err);
         res.status(500).json({ error: err.message });
     }
 });
