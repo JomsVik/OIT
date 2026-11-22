@@ -1,0 +1,25 @@
+services:
+  portal:
+    build: .
+    image: oit-portal:2.0.0
+    init: true
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      BIND_ADDR: 0.0.0.0:3000
+      DATABASE_PATH: /app/data/oit.sqlite3
+    ports:
+      - "${LISTEN_IP:-127.0.0.1}:${PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

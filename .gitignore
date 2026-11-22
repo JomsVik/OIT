@@ -1,0 +1,7 @@
+/target/
+/data/
+/.env
+/backups/
+*.sqlite*
+*.zip
+/oit-offline/

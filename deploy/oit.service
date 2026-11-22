@@ -1,0 +1,24 @@
+[Unit]
+Description=OIT Rust portal
+After=network.target
+
+[Service]
+Type=simple
+User=oit
+Group=oit
+WorkingDirectory=/opt/oit
+EnvironmentFile=/etc/oit/oit.env
+ExecStart=/opt/oit/oit-portal
+Restart=on-failure
+RestartSec=3
+StateDirectory=oit
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/oit
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
