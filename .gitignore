@@ -5,3 +5,5 @@
 *.sqlite*
 *.zip
 /oit-offline/
+/build-local/
+/doc-qa/
