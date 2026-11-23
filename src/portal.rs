@@ -12,7 +12,9 @@ fn comments(
         &format!(
             "SELECT c.*,a.full_name AS admin_name,a.role AS admin_role,u.full_name AS user_name FROM {table} c LEFT JOIN admins a ON a.id=c.admin_id LEFT JOIN users u ON u.id=c.user_id WHERE c.{parent}=? {} ORDER BY c.id",
             if table == "ticket_comments" && !admin {
-                "AND c.is_public=1"
+                "AND c.is_public=1 AND c.is_completion=0"
+            } else if table == "ticket_comments" {
+                "AND c.is_completion=0"
             } else {
                 ""
             }
@@ -40,6 +42,11 @@ fn tickets(db: &Connection, filter: &str, args: &[Value], admin: bool) -> Result
             admin
         )?);
         t.as_object_mut().unwrap().remove("current_color");
+        if !admin {
+            let obj = t.as_object_mut().unwrap();
+            obj.remove("executor_name");
+            obj.remove("completion_details");
+        }
     }
     Ok(data)
 }
@@ -177,12 +184,13 @@ pub fn handle(
                 return Err(Error::new(409, "Заявка уже выполнена"));
             }
             let color = tickets(db, "id=?", &[json!(target)], true)?[0]["color_class"].clone();
-            db.execute("UPDATE tickets SET status=1,executor_name=?,completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),color_class=? WHERE id=?",rusqlite::params![a.name,color.as_str(),target])?;
+            let details = required(&b, "completion_details")?;
+            db.execute("UPDATE tickets SET status=1,executor_name=?,completion_details=?,completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),color_class=? WHERE id=?",rusqlite::params![a.name,details,color.as_str(),target])?;
             return Ok(json!({"success":true,"color":color}));
         }
         if p.get(3) == Some(&"restore") && m == "PUT" {
             db.execute(
-                "UPDATE tickets SET status=0,completed_at=NULL,executor_name=NULL WHERE id=?",
+                "UPDATE tickets SET status=0,completed_at=NULL,executor_name=NULL,completion_details='' WHERE id=?",
                 [target],
             )?;
             return Ok(
@@ -318,6 +326,7 @@ pub fn handle(
                 "computers" => "inventory_computers",
                 "laptops" => "inventory_laptops",
                 "printers" => "inventory_printers",
+                "monitors" => "inventory_monitors",
                 _ => return Err(Error::new(400, "Неверный вид инвентаря")),
             };
             let fields = if kind == "printers" {
@@ -327,6 +336,19 @@ pub fn handle(
                     "cartridge",
                     "location",
                     "ip",
+                    "comment",
+                ]
+            } else if kind == "monitors" {
+                vec![
+                    "inventory_number",
+                    "manufacturer",
+                    "model",
+                    "serial_number",
+                    "diagonal",
+                    "resolution",
+                    "connection_type",
+                    "responsible",
+                    "location",
                     "comment",
                 ]
             } else {

@@ -13,6 +13,7 @@ const app = {
         document.documentElement.dataset.theme=kind==='admins'?'dark':'light';
         document.getElementById('workspace-title').textContent=kind==='admins'?'Панель администратора':'Личный кабинет';
         document.querySelector('.account-badge').dataset.role=account.role||'user';
+        document.getElementById('export-database').hidden=account.role!=='director';
         document.getElementById('login-screen').hidden=true;document.getElementById('workspace').hidden=false;
         document.getElementById('account-name').textContent=account.full_name;
         document.getElementById('account-role').textContent=({director:'Директор',super_admin:'Главный администратор',admin:'Администратор',user:'Пользователь'})[account.role||'user'];
@@ -48,7 +49,8 @@ const app = {
         detail('Заявка №'+ticket.id,root=>{
             root.append(el('p',ticket.problem_desc,{className:'details-text'}),el('p',[ticket.employee_info,ticket.location].join(' · ')),el('p','Код отслеживания: '+ticket.tracking_token,{className:'muted'}));
             if(ticket.comment)root.append(el('p',ticket.comment,{className:'details-text'}));
-            if(ticket.executor_name)root.append(el('p','Выполнил: '+ticket.executor_name));
+            if(this.currentUserType==='admin' && ticket.executor_name)root.append(el('p','Кто сделал: '+ticket.executor_name));
+            if(this.currentUserType==='admin' && ticket.completion_details){root.append(el('h3','Что сделал'),el('p',ticket.completion_details,{className:'details-text'}));}
             renderComments(root,comments);
             const form=el('form');const text=el('textarea',null,{required:true,placeholder:'Написать комментарий',maxLength:10000});const label=el('label','Комментарий');label.append(text);form.append(label);
             let privacy;
@@ -58,10 +60,8 @@ const app = {
     },
     ticketStatus(r,restore) {
         if(restore)return this.api('/api/tickets/'+r.id+'/restore','PUT',{}).then(()=>this.switchTab(this.activeTab)).catch(e=>this.toast(e.message));
-        edit('Завершить заявку №'+r.id,[field('comment_text','Что было сделано','textarea',{required:true})],async b=>{
-            // Record the work description first; a failure never silently closes the ticket.
-            await this.api('/api/tickets/'+r.id+'/comments','POST',{comment_text:b.comment_text,is_public:true});
-            await this.api('/api/tickets/'+r.id+'/complete','PUT',{});this.switchTab(this.activeTab);
+        edit('Завершить заявку №'+r.id,[field('completion_details','Что сделал','textarea',{required:true,help:'Результат выполнения и исполнитель доступны только сотрудникам ОИТ. В комментарии пользователю эта запись не попадает.'})],async b=>{
+            await this.api('/api/tickets/'+r.id+'/complete','PUT',b);this.switchTab(this.activeTab);
         });
     },
     track(root) {
@@ -91,15 +91,15 @@ const app = {
         }catch(e){this.toast(e.message);}
     },
     async inventory(root) {
-        heading(root,'Инвентарь','Компьютеры, ноутбуки и принтеры организации.');
-        const select=el('select',null,{'aria-label':'Вид оборудования'});for(const [k,v] of [['computers','Компьютеры'],['laptops','Ноутбуки'],['printers','Принтеры']])select.add(new Option(v,k));
+        heading(root,'Инвентарь','Компьютеры, ноутбуки, принтеры и мониторы организации.');
+        const select=el('select',null,{'aria-label':'Вид оборудования'});for(const [k,v] of [['computers','Компьютеры'],['laptops','Ноутбуки'],['printers','Принтеры'],['monitors','Мониторы']])select.add(new Option(v,k));
         const toolbar=el('div',null,{className:'actions'});const content=el('div');toolbar.append(select,button('Добавить оборудование',()=>this.editInventory(select.value)));root.append(toolbar,content);
         let revision=0;
-        const load=async()=>{const current=++revision;try{const type=select.value;const data=await this.api('/api/inventory/'+type);if(current!==revision)return;content.replaceChildren();listing(content,data,type==='printers'?[['Инв. номер','inventory_number'],['Модель','model'],['Картридж','cartridge'],['Место','location'],['IP','ip']]:[['Инв. номер','inventory_number'],['Имя','name'],['Ответственный','responsible'],['Место','location'],['CPU','cpu'],['RAM','ram'],['IP LAN','ip_lan']],r=>[button('Изменить',()=>this.editInventory(type,r,load),'secondary'),...(this.manager()?[button('Удалить',()=>this.remove('/api/inventory/'+type+'/'+r.id,load),'danger')]:[])]);}catch(e){this.toast(e.message);}};
+        const load=async()=>{const current=++revision;try{const type=select.value;const data=await this.api('/api/inventory/'+type);if(current!==revision)return;content.replaceChildren();listing(content,data,type==='monitors'?[['Инв. номер','inventory_number'],['Модель','model'],['Серийный номер','serial_number'],['Диагональ','diagonal'],['Разрешение','resolution'],['Ответственный','responsible'],['Место','location']]:type==='printers'?[['Инв. номер','inventory_number'],['Модель','model'],['Картридж','cartridge'],['Место','location'],['IP','ip']]:[['Инв. номер','inventory_number'],['Имя','name'],['Ответственный','responsible'],['Место','location'],['CPU','cpu'],['RAM','ram'],['IP LAN','ip_lan']],r=>[button('Изменить',()=>this.editInventory(type,r,load),'secondary'),...(this.manager()?[button('Удалить',()=>this.remove('/api/inventory/'+type+'/'+r.id,load),'danger')]:[])]);}catch(e){this.toast(e.message);}};
         select.onchange=load;this.inventoryRefresh=load;await load();
     },
     editInventory(type,item={},refresh=this.inventoryRefresh) {
-        const fields=type==='printers'?[['inventory_number','Инвентарный номер'],['model','Модель'],['cartridge','Модель картриджа'],['location','Расположение'],['ip','IP-адрес'],['comment','Примечание']]:[['inventory_number','Инвентарный номер'],['name','Имя ПК'],['responsible','Ответственный'],['location','Расположение'],['cpu','Процессор'],['ram','Оперативная память'],['storage','Накопитель'],['windows_version','ОС'],['ip_inet','Внешний IP'],['ip_lan','IP LAN'],['mac','MAC'],['manufacturer','Производитель']];
+        const fields=type==='monitors'?[['inventory_number','Инвентарный номер'],['manufacturer','Производитель'],['model','Модель'],['serial_number','Серийный номер'],['diagonal','Диагональ'],['resolution','Разрешение'],['connection_type','Подключение'],['responsible','Ответственный'],['location','Расположение'],['comment','Примечание']]:type==='printers'?[['inventory_number','Инвентарный номер'],['model','Модель'],['cartridge','Модель картриджа'],['location','Расположение'],['ip','IP-адрес'],['comment','Примечание']]:[['inventory_number','Инвентарный номер'],['name','Имя ПК'],['responsible','Ответственный'],['location','Расположение'],['cpu','Процессор'],['ram','Оперативная память'],['storage','Накопитель'],['windows_version','ОС'],['ip_inet','Внешний IP'],['ip_lan','IP LAN'],['mac','MAC'],['manufacturer','Производитель']];
         edit(item.id?'Изменить оборудование':'Новое оборудование',fields.map(([k,v])=>field(k,v,'text',{required:k==='inventory_number'})),async b=>{await this.api('/api/inventory/'+type+(item.id?'/'+item.id:''),item.id?'PUT':'POST',b);await refresh();},item);
     },
     async switches(root) {
@@ -112,7 +112,7 @@ const app = {
         detail('Порты · '+sw.inventory_number,root=>{
             root.append(button('Добавить порт',()=>this.editPort(sw)));
             listing(root,sw.ports,[['Порт','port_number'],['Метка','port_label'],['Куда идёт','destination'],['Статус',r=>portStatuses[r.status]],['Скорость','speed'],['VLAN','vlan'],['Примечание','comment']],r=>[button('Изменить',()=>this.editPort(sw,r),'secondary'),...(this.manager()?[button('Удалить',()=>this.remove('/api/switch-ports/'+r.id,()=>{closeEditor();this.switchTab('switches');}),'danger')]:[])]);
-        });
+        },true);
     },
     editPort(sw,item={}) {edit(item.id?'Изменить порт':'Добавить порт',[field('port_number','Номер порта','number',{required:true,min:1,max:sw.ports_count}),field('port_label','Метка'),field('destination','Куда идёт'),field('status','Статус','select',{options:Object.entries(portStatuses)}),field('speed','Скорость'),field('vlan','VLAN'),field('comment','Примечание','textarea')],async b=>{b.port_number=Number(b.port_number);await this.api(item.id?'/api/switch-ports/'+item.id:'/api/switches/'+sw.id+'/ports',item.id?'PUT':'POST',b);this.switchTab('switches');},item);},
     async reports(root) {
@@ -123,7 +123,7 @@ const app = {
     generateReport() {
         edit('Создать отчёт',[field('title','Название','text',{required:true}),field('description','Описание','textarea'),field('type','Содержание','select',{options:[['tickets','Выполненные заявки'],['tasks','Выполненные задачи'],['stats','Статистика заявок по дням'],['stock','Остатки картриджей']]})],async b=>{
             let data;
-            if(b.type==='tickets')data={type:'tickets',tickets:(await this.api('/api/tickets?archived=true')).map(t=>({id:t.id,title:t.employee_info+' · '+t.location,problem_desc:t.problem_desc,created_at:t.created_at,completed_at:t.completed_at,executor_name:t.executor_name}))};
+            if(b.type==='tickets')data={type:'tickets',tickets:(await this.api('/api/tickets?archived=true')).map(t=>({id:t.id,title:t.employee_info+' · '+t.location,problem_desc:t.problem_desc,created_at:t.created_at,completed_at:t.completed_at,executor_name:t.executor_name,completion_details:t.completion_details}))};
             else if(b.type==='tasks')data={type:'tasks',tasks:(await this.api('/api/tasks/archive')).map(t=>({id:t.id,title:t.title,description:t.description,assigned_to:t.assigned_to_name,completed_by:t.completed_by_name,priority:priority[t.priority],created_at:t.created_at,completed_at:t.completed_at}))};
             else if(b.type==='stock')data={type:'stock',stock:(await this.api('/api/cartridges')).map(c=>({model:c.model,barcodes:c.barcodes.map(b=>b.barcode).join(', '),stock:c.stock,min_stock:c.min_stock,compatible_printers:c.compatible_printers}))};
             else {
@@ -137,14 +137,14 @@ const app = {
     },
     viewReport(report) {
         let data;try{data=typeof report.report_data==='string'?JSON.parse(report.report_data):report.report_data;}catch{this.editReport(report);return;}
-        const layouts={tickets:[['ID','id'],['Сотрудник / место','title'],['Проблема','problem_desc'],['Создана','created_at'],['Выполнена','completed_at'],['Выполнил','executor_name']],tasks:[['ID','id'],['Задача','title'],['Описание','description'],['Назначена','assigned_to'],['Выполнил','completed_by'],['Приоритет','priority'],['Создана','created_at'],['Выполнена','completed_at']],stats:[['Дата','date'],['Всего','total'],['Выполнено','completed'],['Ожидают','pending'],['Среднее время, ч','avgSpeed'],['Выполнение, %','completionRate']],stock:[['Модель','model'],['Штрихкоды','barcodes'],['Остаток','stock'],['Порог пополнения','min_stock'],['Совместимость','compatible_printers']]};
+        const layouts={tickets:[['ID','id'],['Сотрудник / место','title'],['Проблема','problem_desc'],['Создана','created_at'],['Выполнена','completed_at'],['Выполнил','executor_name'],['Что сделал','completion_details']],tasks:[['ID','id'],['Задача','title'],['Описание','description'],['Назначена','assigned_to'],['Выполнил','completed_by'],['Приоритет','priority'],['Создана','created_at'],['Выполнена','completed_at']],stats:[['Дата','date'],['Всего','total'],['Выполнено','completed'],['Ожидают','pending'],['Среднее время, ч','avgSpeed'],['Выполнение, %','completionRate']],stock:[['Модель','model'],['Штрихкоды','barcodes'],['Остаток','stock'],['Порог пополнения','min_stock'],['Совместимость','compatible_printers']]};
         const columns=layouts[data?.type],items=data?.[data?.type];if(!columns||!Array.isArray(items)){this.editReport(report);return;}
         detail(report.title,root=>{
             root.append(el('p',report.description||'',{className:'details-text'}));
             const controls=el('div',null,{className:'actions'});
             controls.append(button('Добавить строку',()=>this.editReportRow(report,data,columns,{})),button('Скачать CSV',()=>downloadCSV(report.title,columns,items),'secondary'));root.append(controls);
             listing(root,items,columns,(r)=>[button('Изменить',()=>this.editReportRow(report,data,columns,r,items.indexOf(r)),'secondary')]);
-        });
+        },true);
     },
     editReportRow(report,data,columns,row,index) {
         const numeric=['id','stock','min_stock','total','completed','pending','avgSpeed','completionRate'];
@@ -171,31 +171,36 @@ const app = {
 const priority={low:'Низкий',medium:'Обычный',high:'Высокий'},statuses={pending:'Ожидает',in_progress:'В работе',completed:'Выполнена'},portStatuses={free:'Свободен',active:'Активен',dead:'Не работает',burnt:'Сгорел',reserved:'Резерв'};
 function el(tag,text,props={}) {const node=document.createElement(tag);if(text!==null&&text!==undefined)node.textContent=text;for(const [k,v] of Object.entries(props)){if(k.startsWith('aria-'))node.setAttribute(k,v);else node[k]=v;}return node;}
 function button(text,handler,style='') {const b=el('button',text,{className:style});if(handler){b.type='button';b.onclick=handler;}return b;}
-function date(s){return s?new Date(s).toLocaleString('ru-RU'):'—';}
+function date(s){
+    if(!s)return '—';const dayOnly=/^\d{4}-\d{2}-\d{2}$/.test(String(s));
+    const value=new Date(dayOnly?s+'T00:00:00':s);if(Number.isNaN(value.getTime()))return '—';
+    return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',...(dayOnly?{}:{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}).format(value).replace(', ',' ');
+}
+function normalizeBarcode(value){const ru='ёйцукенгшщзхъфывапролджэячсмитьбю',en="`qwertyuiop[]asdfghjkl;'zxcvbnm,.";const shifted={'[':'{',']':'}',';':':',"'":'"',',':'<','.':'>','`':'~'};return value.trim().split('').map(c=>{const i=ru.indexOf(c.toLowerCase());if(i<0)return c;const mapped=en[i];return c===c.toUpperCase()?(shifted[mapped]||mapped.toUpperCase()):mapped;}).join('');}
 function downloadCSV(title,columns,data){
     const quote=value=>{let s=String(value??'');if(/^[\s]*[=+\-@]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
-    const csv='\uFEFF'+[columns.map(([label])=>quote(label)).join(';'),...data.map(row=>columns.map(([,key])=>quote(row[key])).join(';'))].join('\r\n');
+    const csv='\uFEFF'+[columns.map(([label])=>quote(label)).join(';'),...data.map(row=>columns.map(([,key])=>quote(['created_at','completed_at','updated_at','due_date','date'].includes(key)?date(row[key]):row[key])).join(';'))].join('\r\n');
     const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),link=el('a',null,{href:url,download:title.replace(/[<>:"/\\|?*]/g,'_')+'.csv'});link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function heading(root,title,subtitle,action){const box=el('header',null,{className:'page-heading'}),text=el('div');text.append(el('p','ОТДЕЛ ИНФОРМАЦИОННЫХ ТЕХНОЛОГИЙ',{className:'eyebrow'}),el('h2',title),el('p',subtitle));box.append(text);if(action)box.append(action);root.append(box);}
 function ticketCards(root,data,actions){
     const toolbar=el('div',null,{className:'table-toolbar'}),search=el('input',null,{placeholder:'Поиск по заявкам: сотрудник, кабинет, проблема','aria-label':'Поиск по заявкам'}),count=el('span',null,{className:'count'}),list=el('div',null,{className:'ticket-list'});toolbar.append(search,count);root.append(toolbar,list);
     function draw(){const query=search.value.trim().toLowerCase();const filtered=data.filter(t=>[t.id,t.problem_desc,t.employee_info,t.location,t.executor_name].some(v=>String(v??'').toLowerCase().includes(query)));count.textContent='Заявок: '+filtered.length;list.replaceChildren();
-        for(const ticket of filtered){const colors=['ticket-normal','ticket-warning-1h','ticket-warning-3h','ticket-urgent-6h','ticket-urgent-24h'];const color=colors.includes(ticket.color_class)?ticket.color_class:'ticket-normal';const card=el('article',null,{className:'ticket-card '+(ticket.status?'ticket-completed':color)}),header=el('div',null,{className:'ticket-header'}),identity=el('div',null,{className:'ticket-identity'});identity.append(el('strong',ticket.employee_info),el('span',ticket.location,{className:'location'}));header.append(identity,el('span','№ '+ticket.id,{className:'ticket-id'}));card.append(header,el('p',ticket.problem_desc,{className:'ticket-desc'}));if(ticket.comment)card.append(el('p',ticket.comment,{className:'ticket-note'}));const footer=el('div',null,{className:'ticket-footer'}),meta=el('div',null,{className:'ticket-meta'});meta.append(el('span',date(ticket.created_at)),el('span',ticket.status?'Выполнена':'В работе',{className:'status-pill '+(ticket.status?'completed':'')}));if(ticket.executor_name)meta.append(el('span','Выполнил: '+ticket.executor_name));const controls=el('div',null,{className:'actions'});controls.append(...actions(ticket));footer.append(meta,controls);card.append(footer);list.append(card);}
+        for(const ticket of filtered){const colors=['ticket-normal','ticket-warning-1h','ticket-warning-3h','ticket-urgent-6h','ticket-urgent-24h'];const color=colors.includes(ticket.color_class)?ticket.color_class:'ticket-normal';const card=el('article',null,{className:'ticket-card '+(ticket.status?'ticket-completed':color)}),header=el('div',null,{className:'ticket-header'}),identity=el('div',null,{className:'ticket-identity'});identity.append(el('strong',ticket.employee_info),el('span',ticket.location,{className:'location'}));header.append(identity,el('span','№ '+ticket.id,{className:'ticket-id'}));card.append(header,el('p',ticket.problem_desc,{className:'ticket-desc'}));if(ticket.comment)card.append(el('p',ticket.comment,{className:'ticket-note'}));const footer=el('div',null,{className:'ticket-footer'}),meta=el('div',null,{className:'ticket-meta'});meta.append(el('span',date(ticket.created_at)),el('span',ticket.status?'Выполнена':'В работе',{className:'status-pill '+(ticket.status?'completed':'')}));if(app.currentUserType==='admin'&&ticket.executor_name)meta.append(el('span','Выполнил: '+ticket.executor_name));const controls=el('div',null,{className:'actions'});controls.append(...actions(ticket));footer.append(meta,controls);card.append(footer);list.append(card);}
         if(!filtered.length)list.append(el('p',query?'По вашему запросу ничего не найдено.':'Заявок пока нет.',{className:'panel empty'}));
     }search.oninput=draw;draw();
 }
 function listing(root,data,columns,actions) {
     const panel=el('section',null,{className:'panel'}),toolbar=el('div',null,{className:'table-toolbar'}),search=el('input',null,{placeholder:'Поиск по таблице','aria-label':'Поиск'}),count=el('span',null,{className:'count'}),wrap=el('div',null,{className:'table-wrap'}),table=el('table'),head=el('thead'),tr=el('tr'),body=el('tbody');
     for(const [title] of columns)tr.append(el('th',title));if(actions)tr.append(el('th','Действия'));head.append(tr);table.append(head,body);wrap.append(table);toolbar.append(search,count);panel.append(toolbar,wrap);root.append(panel);
-    function draw(){const query=search.value.toLowerCase();const filtered=data.filter(r=>columns.some(([,field])=>String(typeof field==='function'?field(r):r[field]??'').toLowerCase().includes(query)));count.textContent='Записей: '+filtered.length;body.replaceChildren();for(const r of filtered){const row=el('tr');for(const [,field] of columns)row.append(el('td',typeof field==='function'?field(r):r[field]??'—'));if(actions){const td=el('td');td.append(...actions(r));row.append(td);}body.append(row);}if(!filtered.length){const row=el('tr'),td=el('td','Записей пока нет или ничего не найдено.',{className:'empty'});td.colSpan=columns.length+(actions?1:0);row.append(td);body.append(row);}}
+    function draw(){const query=search.value.toLowerCase();const filtered=data.filter(r=>columns.some(([,field])=>String(typeof field==='function'?field(r):r[field]??'').toLowerCase().includes(query)));count.textContent='Записей: '+filtered.length;body.replaceChildren();for(const r of filtered){const row=el('tr');for(const [,field] of columns){const value=typeof field==='function'?field(r):(['created_at','completed_at','updated_at','due_date','date'].includes(field)?date(r[field]):r[field]??'—');const td=el('td',value);if(/^\d{2}\.\d{2}\.\d{4}(?: \d{2}:\d{2})?$/.test(String(value)))td.className='date-cell';row.append(td);}if(actions){const td=el('td');td.append(...actions(r));row.append(td);}body.append(row);}if(!filtered.length){const row=el('tr'),td=el('td','Записей пока нет или ничего не найдено.',{className:'empty'});td.colSpan=columns.length+(actions?1:0);row.append(td);body.append(row);}}
     search.oninput=draw;draw();
 }
 function field(name,label,type='text',props={}){return {name,label,type,...props};}
 function closeEditor(){document.getElementById('editor').close();}
 function edit(title,fields,save,values={}) {
     const dialog=document.getElementById('editor'),form=document.getElementById('editor-form'),root=document.getElementById('editor-fields'),error=document.getElementById('editor-error'),submit=document.getElementById('editor-save');
-    document.getElementById('editor-title').textContent=title;root.replaceChildren();error.textContent='';submit.hidden=false;submit.disabled=false;
+    document.getElementById('editor-title').textContent=title;root.replaceChildren();error.textContent='';submit.hidden=false;submit.disabled=false;dialog.classList.toggle('fullscreen',/отч[её]т|порт/i.test(title));
     const controls=[];
     for(const f of fields){const label=el('label',f.label),input=el(f.type==='textarea'?'textarea':f.type==='select'?'select':'input');if(input.tagName==='INPUT')input.type=f.type;input.name=f.name;for(const k of ['required','min','max','minLength','maxLength'])if(f[k]!==undefined)input[k]=f[k];if(f.type==='select')for(const [v,t] of f.options)input.add(new Option(t,v));input.value=values[f.name]??f.value??(f.type==='select'?f.options[0]?.[0]:'')??'';label.append(input);if(f.help){const help=el('small',f.help,{className:'field-help',id:'editor-help-'+f.name});input.setAttribute('aria-describedby',help.id);label.append(help);}root.append(label);controls.push({f,label,input});}
     const syncFields=()=>{const b=Object.fromEntries(new FormData(form));for(const {f,label,input} of controls){const visible=!f.visibleWhen||f.visibleWhen(b);label.hidden=!visible;input.disabled=!visible;}};
@@ -203,10 +208,14 @@ function edit(title,fields,save,values={}) {
     form.onsubmit=async e=>{e.preventDefault();submit.disabled=true;error.textContent='';try{await save(Object.fromEntries(new FormData(form)));dialog.close();}catch(err){error.textContent=err.message;}finally{submit.disabled=false;}};
     if(!dialog.open)dialog.showModal();
 }
-function detail(title,build){document.getElementById('editor-title').textContent=title;document.getElementById('editor-error').textContent='';document.getElementById('editor-save').hidden=true;document.getElementById('editor-form').onsubmit=e=>e.preventDefault();const root=document.getElementById('editor-fields');root.replaceChildren();build(root);const d=document.getElementById('editor');if(!d.open)d.showModal();}
+function detail(title,build,fullscreen=false){document.getElementById('editor-title').textContent=title;document.getElementById('editor-error').textContent='';document.getElementById('editor-save').hidden=true;document.getElementById('editor-form').onsubmit=e=>e.preventDefault();document.getElementById('editor-form').onchange=null;const root=document.getElementById('editor-fields');root.replaceChildren();build(root);const d=document.getElementById('editor');d.classList.toggle('fullscreen',fullscreen);if(!d.open)d.showModal();}
 function renderComments(root,comments){root.append(el('h3','Обсуждение'));for(const c of comments){const item=el('article',null,{className:'comment'});item.append(el('small',(c.admin_name||c.user_name||'Удалённая учётная запись')+' · '+date(c.created_at)+(c.is_public===false?' · Внутренний комментарий':'')),el('p',c.comment_text));root.append(item);}if(!comments.length)root.append(el('p','Комментариев пока нет.',{className:'muted'}));}
 document.getElementById('editor-close').onclick=closeEditor;
 document.getElementById('refresh-page').onclick=()=>app.switchTab(app.activeTab);
+document.getElementById('export-database').onclick=async()=>{
+    const button=document.getElementById('export-database');button.disabled=true;
+    try{const r=await fetch('/api/database/export');if(!r.ok){const e=await r.json();throw new Error(e.error||'Не удалось выгрузить БД');}const url=URL.createObjectURL(await r.blob());const a=el('a',null,{href:url,download:'oit-backup-'+new Date().toISOString().replace(/[:.]/g,'-')+'.sqlite3'});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);app.toast('Копия БД выгружена. Храните её в защищённом месте.');}catch(e){app.toast(e.message);}finally{button.disabled=false;}
+};
 document.getElementById('logout').onclick=()=>app.logout();
 function setLoginType(type){document.querySelector('#login-form [name="type"]').value=type;document.querySelectorAll('[data-account-type]').forEach(b=>{const active=b.dataset.accountType===type;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});document.getElementById('login-error').textContent='';}
 document.querySelectorAll('[data-account-type]').forEach(b=>b.onclick=()=>setLoginType(b.dataset.accountType));

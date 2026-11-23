@@ -7,9 +7,9 @@ if [[ -e "$oit_output" ]]; then
   printf 'Каталог назначения уже существует: %s\n' "$oit_output" >&2
   exit 1
 fi
-docker build --tag oit-portal:2.0.0 .
+docker build --tag oit-portal:2.1.0 .
 mkdir -p "$oit_output/deploy"
-docker image save oit-portal:2.0.0 | gzip > "$oit_output/oit-portal-image.tar.gz"
+docker image save oit-portal:2.1.0 | gzip > "$oit_output/oit-portal-image.tar.gz"
 cp compose.yaml .env.example "$oit_output/"
 cp deploy/prepare.sh deploy/backup.sh "$oit_output/deploy/"
 cat > "$oit_output/START.txt" <<'EOF'

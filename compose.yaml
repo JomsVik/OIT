@@ -1,7 +1,7 @@
 services:
   portal:
     build: .
-    image: oit-portal:2.0.0
+    image: oit-portal:2.1.0
     init: true
     restart: unless-stopped
     env_file: .env

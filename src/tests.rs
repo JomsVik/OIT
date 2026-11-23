@@ -5,6 +5,296 @@ use axum::{
 };
 use tower::ServiceExt;
 
+#[test]
+fn receipt_discards_installation_fields_and_keyboard_layout_is_converted() {
+    let (mut db, a) = setup();
+    assert_eq!(stock::normalize_barcode("РЗ-85Ф"), "HP-85A");
+    assert_eq!(stock::normalize_barcode("сфкекшвпу123"), "cartridge123");
+    stock::handle(
+        &mut db,
+        "POST",
+        &["api", "cartridges"],
+        &json!({"barcode":"РЗ-85Ф","model":"HP"}),
+        &a,
+    )
+    .unwrap();
+    let m=stock::movement(&mut db,&json!({"barcode":"HP-85A","kind":"receipt","quantity":2,"destination":"Must not be stored","printer_id":999,"request_id":uuid::Uuid::new_v4().to_string()}),&a).unwrap();
+    assert_eq!(m["movement"]["destination"], "");
+    assert!(m["movement"]["printer_id"].is_null());
+    stock::movement(&mut db,&json!({"barcode":"РЗ-85Ф","kind":"issue","destination":"204","request_id":uuid::Uuid::new_v4().to_string()}),&a).unwrap();
+    assert_eq!(balance(&db), 1);
+}
+
+#[test]
+fn deleting_cartridge_preserves_history_and_protects_stock() {
+    let (mut db, a) = setup();
+    let c = item(&mut db, &a);
+    let cid = c["id"].to_string();
+    stock::movement(&mut db, &movement("receipt", 1), &a).unwrap();
+    assert_eq!(
+        stock::handle(
+            &mut db,
+            "DELETE",
+            &["api", "cartridges", &cid],
+            &json!({}),
+            &a
+        )
+        .unwrap_err()
+        .status,
+        409
+    );
+    stock::movement(&mut db, &movement("issue", 1), &a).unwrap();
+    let mut ordinary = a.clone();
+    ordinary.role = "admin".into();
+    assert_eq!(
+        stock::handle(
+            &mut db,
+            "DELETE",
+            &["api", "cartridges", &cid],
+            &json!({}),
+            &ordinary
+        )
+        .unwrap_err()
+        .status,
+        403
+    );
+    stock::handle(
+        &mut db,
+        "DELETE",
+        &["api", "cartridges", &cid],
+        &json!({}),
+        &a,
+    )
+    .unwrap();
+    assert!(
+        stock::handle(&mut db, "GET", &["api", "cartridges"], &json!({}), &a)
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        rows(&db, "SELECT * FROM cartridge_movements", &[])
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(
+        stock::movement(&mut db, &movement("receipt", 1), &a)
+            .unwrap_err()
+            .status,
+        404
+    );
+}
+
+#[test]
+fn completion_is_private_on_every_user_endpoint_and_never_a_comment() {
+    let (mut db, a) = setup();
+    let q = HashMap::new();
+    db.execute(
+        "INSERT INTO users(id,login_id,password_hash,full_name) VALUES(1,'u','x','User')",
+        [],
+    )
+    .unwrap();
+    let u = Actor {
+        id: 1,
+        kind: "users".into(),
+        role: "user".into(),
+        name: "User".into(),
+    };
+    let t = portal::handle(
+        &mut db,
+        "POST",
+        &["api", "tickets"],
+        &q,
+        json!({"problem":"Test","employee":"U","location":"1"}),
+        &u,
+    )
+    .unwrap();
+    let tid = t["ticketId"].to_string();
+    assert_eq!(
+        portal::handle(
+            &mut db,
+            "PUT",
+            &["api", "tickets", &tid, "complete"],
+            &q,
+            json!({}),
+            &a
+        )
+        .unwrap_err()
+        .status,
+        400
+    );
+    portal::handle(
+        &mut db,
+        "POST",
+        &["api", "tickets", &tid, "comments"],
+        &q,
+        json!({"comment_text":"Public reply","is_public":true}),
+        &a,
+    )
+    .unwrap();
+    portal::handle(
+        &mut db,
+        "PUT",
+        &["api", "tickets", &tid, "complete"],
+        &q,
+        json!({"completion_details":"Private repair details"}),
+        &a,
+    )
+    .unwrap();
+    let admin = portal::handle(
+        &mut db,
+        "GET",
+        &["api", "tickets"],
+        &HashMap::from([("archived".into(), "true".into())]),
+        json!({}),
+        &a,
+    )
+    .unwrap();
+    assert_eq!(admin[0]["completion_details"], "Private repair details");
+    assert_eq!(admin[0]["comments"].as_array().unwrap().len(), 1);
+    let list = portal::handle(
+        &mut db,
+        "GET",
+        &["api", "tickets"],
+        &HashMap::from([("archived".into(), "true".into())]),
+        json!({}),
+        &u,
+    )
+    .unwrap();
+    let single = portal::handle(
+        &mut db,
+        "GET",
+        &[
+            "api",
+            "ticket",
+            "track",
+            t["trackingToken"].as_str().unwrap(),
+        ],
+        &q,
+        json!({}),
+        &u,
+    )
+    .unwrap();
+    let bulk = portal::handle(
+        &mut db,
+        "POST",
+        &["api", "tickets", "track"],
+        &q,
+        json!({"tokens":[t["trackingToken"]]}),
+        &u,
+    )
+    .unwrap();
+    for record in [&list[0], &single, &bulk[0]] {
+        assert!(record.get("completion_details").is_none());
+        assert!(record.get("executor_name").is_none());
+        assert!(!record.to_string().contains("Private repair details"));
+    }
+}
+
+#[test]
+fn monitor_inventory_roundtrip() {
+    let (mut db, a) = setup();
+    let q = HashMap::new();
+    let m=portal::handle(&mut db,"POST",&["api","inventory","monitors"],&q,json!({"inventory_number":"MON-1","model":"Dell","diagonal":"24","resolution":"1920x1080","serial_number":"SN1"}),&a).unwrap();
+    let mid = m["id"].to_string();
+    portal::handle(
+        &mut db,
+        "PUT",
+        &["api", "inventory", "monitors", &mid],
+        &q,
+        json!({"location":"204"}),
+        &a,
+    )
+    .unwrap();
+    let data = portal::handle(
+        &mut db,
+        "GET",
+        &["api", "inventory", "monitors"],
+        &q,
+        json!({}),
+        &a,
+    )
+    .unwrap();
+    assert_eq!(data[0]["location"], "204");
+    assert_eq!(data[0]["serial_number"], "SN1");
+    portal::handle(
+        &mut db,
+        "DELETE",
+        &["api", "inventory", "monitors", &mid],
+        &q,
+        json!({}),
+        &a,
+    )
+    .unwrap();
+}
+
+#[test]
+fn database_export_is_a_valid_snapshot_without_active_sessions() {
+    let (mut db, a) = setup();
+    item(&mut db, &a);
+    db.execute(
+        "INSERT INTO sessions VALUES (?,1,'admins',unixepoch()+3600)",
+        [token_hash("export-test")],
+    )
+    .unwrap();
+    let headers = HeaderMap::from_iter([(
+        "cookie".parse().unwrap(),
+        "oit_session=export-test".parse().unwrap(),
+    )]);
+    let bytes = export_database(&db, &headers).unwrap();
+    assert!(bytes.starts_with(b"SQLite format 3\0"));
+    let path =
+        std::env::temp_dir().join(format!("oit-export-test-{}.sqlite3", uuid::Uuid::new_v4()));
+    std::fs::write(&path, bytes).unwrap();
+    let copy = Connection::open(&path).unwrap();
+    assert_eq!(
+        rows(&copy, "SELECT * FROM cartridges", &[]).unwrap().len(),
+        1
+    );
+    assert!(
+        rows(&copy, "SELECT * FROM sessions", &[])
+            .unwrap()
+            .is_empty()
+    );
+    drop(copy);
+    std::fs::remove_file(path).unwrap();
+    assert_eq!(rows(&db, "SELECT * FROM sessions", &[]).unwrap().len(), 1);
+    db.execute("UPDATE admins SET role='admin' WHERE id=1", [])
+        .unwrap();
+    assert_eq!(export_database(&db, &headers).unwrap_err().status, 403);
+}
+
+#[test]
+fn upgrade_moves_old_completion_comments_to_private_result() {
+    let mut db = Connection::open_in_memory().unwrap();
+    db.execute_batch("CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY);")
+        .unwrap();
+    for (version, sql) in [
+        (1, include_str!("../migrations/001_initial.sql")),
+        (2, include_str!("../migrations/002_cartridges.sql")),
+        (3, include_str!("../migrations/003_login_limits.sql")),
+        (4, include_str!("../migrations/004_audit_snapshot.sql")),
+    ] {
+        db.execute_batch(sql).unwrap();
+        db.execute("INSERT INTO schema_migrations VALUES(?)", [version])
+            .unwrap();
+    }
+    db.execute("INSERT INTO admins(id,login_id,password_hash,full_name,role) VALUES(1,'d','x','Technician','director')",[]).unwrap();
+    db.execute("INSERT INTO tickets(id,problem_desc,location,employee_info,tracking_token,status,executor_name,completed_at) VALUES(1,'p','l','u','token',1,'Technician','2026-11-23T10:00:01Z')",[]).unwrap();
+    db.execute("INSERT INTO ticket_comments(ticket_id,admin_id,comment_text,is_public,created_at) VALUES(1,1,'Repair result',1,'2026-11-23T10:00:00Z')",[]).unwrap();
+    initialize(&mut db).unwrap();
+    assert_eq!(
+        one(&db, "SELECT completion_details FROM tickets", &[]).unwrap()["completion_details"],
+        "Repair result"
+    );
+    assert_eq!(
+        one(&db, "SELECT is_public FROM ticket_comments", &[]).unwrap()["is_public"],
+        false
+    );
+}
+
 fn setup() -> (Connection, Actor) {
     let mut db = Connection::open_in_memory().unwrap();
     initialize(&mut db).unwrap();
@@ -46,7 +336,7 @@ fn migrations_are_repeatable() {
         rows(&db, "SELECT * FROM schema_migrations", &[])
             .unwrap()
             .len(),
-        4
+        5
     );
 }
 #[test]
@@ -155,10 +445,11 @@ fn issue_requires_destination() {
 fn invalid_printer_rolls_back() {
     let (mut db, a) = setup();
     item(&mut db, &a);
-    let mut b = movement("receipt", 2);
+    stock::movement(&mut db, &movement("receipt", 2), &a).unwrap();
+    let mut b = movement("issue", 1);
     b["printer_id"] = json!(999);
     assert_eq!(stock::movement(&mut db, &b, &a).unwrap_err().status, 404);
-    assert_eq!(balance(&db), 0);
+    assert_eq!(balance(&db), 2);
 }
 #[test]
 fn history_is_immutable() {

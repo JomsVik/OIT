@@ -11,7 +11,7 @@ if not exist ".env" (
   start "" /wait notepad.exe ".env"
 )
 echo.
-echo Open http://127.0.0.1:3000 in your browser after the server starts.
+echo Open http://%BIND_ADDR% in your browser after the server starts.
 echo Keep this window open. Press Ctrl+C to stop the portal.
 echo.
 oit-portal.exe

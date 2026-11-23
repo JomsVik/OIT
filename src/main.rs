@@ -171,7 +171,9 @@ fn dispatch(
     let ok = |v| Ok((v, None));
     if path == "/api/health" && method == "GET" {
         db.query_row("SELECT 1", [], |r| r.get::<_, i64>(0))?;
-        return ok(json!({"status":"ok","version":env!("CARGO_PKG_VERSION")}));
+        return ok(
+            json!({"status":"ok","backend":"Rust / Axum","database":"SQLite","version":env!("CARGO_PKG_VERSION")}),
+        );
     }
     if p.len() == 3 && ["admins", "users"].contains(&p[1]) && p[2] == "login" && method == "POST" {
         let login = required(&b, "login_id")?;
@@ -369,6 +371,22 @@ fn dispatch(
     ok(portal::handle(db, method, &p, q, b, &a)?)
 }
 
+fn export_database(db: &Connection, headers: &HeaderMap) -> Result<Vec<u8>> {
+    actor(db, headers)?.director()?;
+    let path = std::env::temp_dir().join(format!("oit-export-{}.sqlite3", uuid::Uuid::new_v4()));
+    let result = (|| {
+        db.execute("VACUUM INTO ?", [path.to_string_lossy().as_ref()])?;
+        let copy = Connection::open(&path)?;
+        copy.execute_batch(
+            "DELETE FROM sessions; DELETE FROM login_attempts; PRAGMA journal_mode=DELETE;",
+        )?;
+        drop(copy);
+        std::fs::read(&path).map_err(|_| Error::new(500, "Не удалось прочитать копию БД"))
+    })();
+    let _ = std::fs::remove_file(&path);
+    result
+}
+
 async fn api(
     State(app): State<App>,
     method: Method,
@@ -376,6 +394,33 @@ async fn api(
     headers: HeaderMap,
     body: Bytes,
 ) -> Response {
+    if uri.path() == "/api/database/export" && method == Method::GET {
+        return match tokio::task::spawn_blocking(move || {
+            let db = app
+                .db
+                .lock()
+                .map_err(|_| Error::new(500, "База недоступна"))?;
+            export_database(&db, &headers)
+        })
+        .await
+        {
+            Ok(Ok(bytes)) => (
+                [
+                    ("content-type", "application/vnd.sqlite3"),
+                    (
+                        "content-disposition",
+                        "attachment; filename=oit-backup.sqlite3",
+                    ),
+                    ("cache-control", "no-store"),
+                    ("x-content-type-options", "nosniff"),
+                ],
+                bytes,
+            )
+                .into_response(),
+            Ok(Err(e)) => e.into_response(),
+            Err(_) => Error::new(500, "Не удалось выгрузить БД").into_response(),
+        };
+    }
     if method != Method::GET && method != Method::HEAD {
         if let Some(origin) = headers.get("origin").and_then(|v| v.to_str().ok()) {
             let host = headers

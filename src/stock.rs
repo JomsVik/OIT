@@ -1,7 +1,36 @@
 use crate::{db::*, *};
 
+pub fn normalize_barcode(s: &str) -> String {
+    let ru = "ёйцукенгшщзхъфывапролджэячсмитьбю";
+    let en = "`qwertyuiop[]asdfghjkl;'zxcvbnm,.";
+    s.trim()
+        .chars()
+        .map(|c| {
+            let lower = c.to_lowercase().next().unwrap_or(c);
+            if let Some(i) = ru.chars().position(|r| r == lower) {
+                let mapped = en.chars().nth(i).unwrap();
+                if c.is_uppercase() {
+                    match mapped {
+                        '[' => '{',
+                        ']' => '}',
+                        ';' => ':',
+                        '\'' => '"',
+                        ',' => '<',
+                        '.' => '>',
+                        '`' => '~',
+                        _ => mapped.to_ascii_uppercase(),
+                    }
+                } else {
+                    mapped
+                }
+            } else {
+                c
+            }
+        })
+        .collect()
+}
 fn barcode(b: &Value) -> Result<String> {
-    let s = required(b, "barcode")?;
+    let s = normalize_barcode(&required(b, "barcode")?);
     if s.len() > 128 || s.chars().any(char::is_control) {
         return Err(Error::new(
             400,
@@ -22,7 +51,11 @@ fn quantity(b: &Value, key: &str, default: i64, min: i64) -> Result<i64> {
 pub fn handle(db: &mut Connection, m: &str, p: &[&str], b: &Value, a: &Actor) -> Result<Value> {
     if p.len() == 2 {
         if m == "GET" {
-            let mut items = rows(db, "SELECT * FROM cartridges ORDER BY model,id", &[])?;
+            let mut items = rows(
+                db,
+                "SELECT * FROM cartridges WHERE archived_at IS NULL ORDER BY model,id",
+                &[],
+            )?;
             for item in &mut items {
                 item["barcodes"] = json!(rows(
                     db,
@@ -65,6 +98,25 @@ pub fn handle(db: &mut Connection, m: &str, p: &[&str], b: &Value, a: &Actor) ->
         }
     }
     let target = id(p.get(2).unwrap_or(&""))?;
+    let item = one(
+        db,
+        "SELECT * FROM cartridges WHERE id=? AND archived_at IS NULL",
+        &[json!(target)],
+    )?;
+    if p.len() == 3 && m == "DELETE" {
+        a.manager()?;
+        if item["stock"].as_i64().unwrap_or(0) != 0 {
+            return Err(Error::new(
+                409,
+                "Удалить можно карточку с нулевым остатком. Сначала проведите фактическую выдачу оставшихся картриджей.",
+            ));
+        }
+        db.execute(
+            "UPDATE cartridges SET archived_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
+            [target],
+        )?;
+        return Ok(json!({"success":true}));
+    }
     if p.get(3) == Some(&"barcodes") && m == "POST" {
         let code = barcode(b)?;
         one(db, "SELECT id FROM cartridges WHERE id=?", &[json!(target)])?;
@@ -105,19 +157,23 @@ pub fn movement(db: &mut Connection, b: &Value, a: &Actor) -> Result<Value> {
     let destination = if kind == "issue" {
         required(b, "destination")?
     } else {
-        b["destination"].as_str().unwrap_or("").trim().to_string()
+        String::new()
     };
     let note = b["note"].as_str().unwrap_or("");
-    let printer = match b.get("printer_id") {
-        None | Some(Value::Null) => Value::Null,
-        Some(v) => json!(
-            v.as_i64()
-                .filter(|n| *n > 0)
-                .ok_or_else(|| Error::new(400, "Некорректный принтер"))?
-        ),
+    let printer = if kind != "issue" {
+        Value::Null
+    } else {
+        match b.get("printer_id") {
+            None | Some(Value::Null) => Value::Null,
+            Some(v) => json!(
+                v.as_i64()
+                    .filter(|n| *n > 0)
+                    .ok_or_else(|| Error::new(400, "Некорректный принтер"))?
+            ),
+        }
     };
     let tx = db.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-    let item=one(&tx,"SELECT c.* FROM cartridges c JOIN cartridge_barcodes b ON b.cartridge_id=c.id WHERE b.barcode=?",&[json!(code)]).map_err(|e|if e.status==404 {Error::new(404,"Штрихкод не зарегистрирован. Создайте карточку или добавьте код к существующей модели")}else{e})?;
+    let item=one(&tx,"SELECT c.* FROM cartridges c JOIN cartridge_barcodes b ON b.cartridge_id=c.id WHERE b.barcode=? AND c.archived_at IS NULL",&[json!(code)]).map_err(|e|if e.status==404 {Error::new(404,"Штрихкод не зарегистрирован или карточка удалена. Создайте карточку или добавьте код к существующей модели")}else{e})?;
     if let Some(existing) = rows(
         &tx,
         "SELECT * FROM cartridge_movements WHERE request_id=?",

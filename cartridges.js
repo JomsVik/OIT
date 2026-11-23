@@ -31,11 +31,12 @@
         <div class="stock-columns"><section class="stock-panel"><h3>Сканирование</h3>
         <form id="stock-scan"><label>Операция<select id="stock-kind"><option value="issue">Выдача · 1 шт. за сканирование</option><option value="receipt">Приход партии</option><option value="return">Возврат на склад</option></select></label>
         <label id="stock-qty-label" hidden>Количество<input id="stock-qty" type="number" min="1" max="1000000" step="1" value="1" required></label>
-        <label>Куда устанавливаем / получатель<input id="stock-destination" maxlength="500" placeholder="Кабинет 204, бухгалтерия" required></label>
-        <label>Принтер (необязательно)<select id="stock-printer"><option value="">Без привязки к принтеру</option></select></label>
+        <label id="stock-destination-label">Куда устанавливаем / получатель<input id="stock-destination" maxlength="500" placeholder="Кабинет 204, бухгалтерия" required></label>
+        <label id="stock-printer-label">Принтер (необязательно)<select id="stock-printer"><option value="">Без привязки к принтеру</option></select></label>
         <label>Примечание<input id="stock-note" maxlength="1000" placeholder="Накладная, партия или причина возврата"></label>
         <label>Штрихкод<input id="stock-barcode" autocomplete="off" spellcheck="false" maxlength="128" placeholder="Отсканируйте картридж" required></label>
-        <p class="stock-help">Сканер должен работать как USB-клавиатура и добавлять Enter. При выдаче каждый Enter списывает одну штуку. Перед сканированием укажите место установки.</p>
+        <p id="stock-layout-message" class="field-help" role="status" aria-live="polite"></p>
+        <p id="stock-mode-help" class="stock-help"></p>
         <button id="stock-submit" type="submit">Записать операцию</button><button id="stock-retry" type="button" hidden>Повторить неподтверждённую операцию</button></form><p id="stock-message" role="status" aria-live="polite"></p></section>
         <section class="stock-panel"><h3>Карточки и штрихкоды</h3><form id="stock-create"><label>Модель<input name="model" required maxlength="200" placeholder="HP 85A / CE285A"></label><label>Первый штрихкод<input name="barcode" required maxlength="128"></label><label>Совместимые принтеры<input name="compatible_printers" maxlength="500"></label><label>Порог пополнения, шт.<input name="min_stock" type="number" min="0" max="1000000" value="2" required aria-describedby="stock-threshold-help"></label><p id="stock-threshold-help" class="field-help">Когда остаток равен этому числу или ниже, модель попадает в «Требуют пополнения». Например, 2 — напомнить о закупке, когда осталось 2 картриджа или меньше. Выдачу это не ограничивает.</p><button type="submit">Создать карточку</button></form>
         <details><summary>Новый штрихкод у существующей модели</summary><form id="stock-alias"><label>Модель<select id="stock-alias-item" required></select></label><label>Штрихкод новой партии<input name="barcode" required maxlength="128"></label><label>Партия / примечание<input name="batch_note" maxlength="500"></label><button type="submit">Привязать штрихкод</button></form></details></section></div>
@@ -55,7 +56,9 @@
                 cell(row, item.stock).className = item.low_stock ? 'stock-warning' : ''; cell(row, item.min_stock);
                 const editButton=document.createElement('button');editButton.type='button';editButton.className='secondary';editButton.textContent='Изменить';
                 editButton.onclick=()=>edit('Карточка картриджа',[field('model','Модель','text',{required:true}),field('compatible_printers','Совместимые принтеры'),field('min_stock','Порог пополнения, шт.','number',{required:true,min:0,max:1000000,help:'Когда остаток равен порогу или ниже, модель попадает в «Требуют пополнения». На выдачу это не влияет.'})],async b=>{b.min_stock=Number(b.min_stock);await app.api('/api/cartridges/'+item.id,'PUT',b);await refresh();},item);
-                cell(row,'').append(editButton);$('stock-items').append(row);
+                const actions=cell(row,'');actions.append(editButton);
+                if(app.manager()){const remove=document.createElement('button');remove.type='button';remove.className='danger';remove.textContent='Удалить';remove.onclick=async()=>{if(!confirm('Удалить карточку из списка склада? Удаление доступно при нулевом остатке; журнал сохранится.'))return;try{await app.api('/api/cartridges/'+item.id,'DELETE',{});await refresh();message('Карточка удалена из списка. История операций сохранена.');}catch(e){message(e.message,true);}};actions.append(remove);}
+                $('stock-items').append(row);
             }
             if (!$('stock-items').children.length) {const row=document.createElement('tr');cell(row,'Карточек пока нет или ничего не найдено.').colSpan=5;$('stock-items').append(row);}
         }
@@ -74,29 +77,31 @@
             const names={receipt:'Приход',issue:'Выдача',return:'Возврат'};
             for (const m of history) {
                 const row=document.createElement('tr');
-                for (const text of [new Date(m.created_at).toLocaleString('ru-RU'),m.model+' · '+m.scanned_barcode,names[m.kind],m.quantity,m.balance_after,[m.destination,m.printer_inventory_number].filter(Boolean).join(' · '),m.admin_name||'Удалённая учётная запись',m.note]) cell(row,text);
+                for (const text of [date(m.created_at),m.model+' · '+m.scanned_barcode,names[m.kind],m.quantity,m.balance_after,[m.destination,m.printer_inventory_number].filter(Boolean).join(' · '),m.admin_name||'Удалённая учётная запись',m.note]) cell(row,text);
                 $('stock-history').append(row);
             }
             if (!history.length){const row=document.createElement('tr');cell(row,'Операций пока нет.').colSpan=8;$('stock-history').append(row);}
             draw();
         }
-        function mode() { const issue=$('stock-kind').value==='issue';$('stock-qty-label').hidden=issue;$('stock-destination').required=issue;$('stock-qty').disabled=issue; }
+        function mode() { const issue=$('stock-kind').value==='issue';$('stock-qty-label').hidden=issue;$('stock-destination-label').hidden=!issue;$('stock-printer-label').hidden=!issue;$('stock-destination').required=issue;$('stock-destination').disabled=!issue;$('stock-printer').disabled=!issue;$('stock-qty').disabled=issue;$('stock-mode-help').textContent=issue?'Укажите место установки и отсканируйте картридж. Каждый Enter списывает 1 штуку. Русская раскладка штрихкода исправляется автоматически.':'Укажите количество и отсканируйте штрихкод с Enter. Для прихода и возврата место установки и принтер не нужны. Русская раскладка исправляется автоматически.'; }
+        root.addEventListener('input',e=>{if(e.target.matches('#stock-barcode,input[name="barcode"]')){const original=e.target.value;const normalized=normalizeBarcode(original);if(original!==normalized){e.target.value=normalized;$('stock-layout-message').textContent='Раскладка исправлена: '+normalized;}}});
         $('stock-kind').onchange=mode; mode();
         $('stock-search').oninput=draw;
         $('stock-refresh').onclick=()=>refresh().catch(e=>message(e.message,true));
         $('stock-create').onsubmit=async e=> {
             e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;
-            try {const data=Object.fromEntries(new FormData(e.target));data.min_stock=Number(data.min_stock);await request('/api/cartridges',data);e.target.reset();message('Карточка создана. Теперь зарегистрируйте приход.');await refresh();}catch(err){message(err.message,true);}finally{button.disabled=false;}
+            try {const data=Object.fromEntries(new FormData(e.target));data.barcode=normalizeBarcode(data.barcode);data.min_stock=Number(data.min_stock);await request('/api/cartridges',data);e.target.reset();message('Карточка создана. Теперь зарегистрируйте приход.');await refresh();}catch(err){message(err.message,true);}finally{button.disabled=false;}
         };
         $('stock-alias').onsubmit=async e=> {
             e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;
-            try {const data=Object.fromEntries(new FormData(e.target));await request('/api/cartridges/'+$('stock-alias-item').value+'/barcodes',data);e.target.reset();message('Штрихкод привязан к модели.');await refresh();}catch(err){message(err.message,true);}finally{button.disabled=false;}
+            try {const data=Object.fromEntries(new FormData(e.target));data.barcode=normalizeBarcode(data.barcode);await request('/api/cartridges/'+$('stock-alias-item').value+'/barcodes',data);e.target.reset();message('Штрихкод привязан к модели.');await refresh();}catch(err){message(err.message,true);}finally{button.disabled=false;}
         };
         async function submit(retry=false) {
             if (busy) return;
             if (!retry && pending) {message('Сначала повторите неподтверждённую операцию, чтобы не списать картридж дважды.',true);return;}
             busy=true;$('stock-submit').disabled=true;$('stock-retry').disabled=true;
-            const payload = retry ? pending : {barcode:$('stock-barcode').value.trim(),kind:$('stock-kind').value,quantity:$('stock-kind').value==='issue'?1:Number($('stock-qty').value),destination:$('stock-destination').value.trim(),printer_id:$('stock-printer').value?Number($('stock-printer').value):null,note:$('stock-note').value.trim(),request_id:makeId()};
+            const issue=$('stock-kind').value==='issue';
+            const payload = retry ? pending : {barcode:normalizeBarcode($('stock-barcode').value),kind:$('stock-kind').value,quantity:issue?1:Number($('stock-qty').value),destination:issue?$('stock-destination').value.trim():'',printer_id:issue&&$('stock-printer').value?Number($('stock-printer').value):null,note:$('stock-note').value.trim(),request_id:makeId()};
             pending=payload;
             try {
                 localStorage.setItem(pendingKey,JSON.stringify(payload));
