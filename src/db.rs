@@ -17,6 +17,7 @@ pub fn initialize(db: &mut Connection) -> Result<()> {
         (3, include_str!("../migrations/003_login_limits.sql")),
         (4, include_str!("../migrations/004_audit_snapshot.sql")),
         (5, include_str!("../migrations/005_portal_fixes.sql")),
+        (6, include_str!("../migrations/006_import_inventory.sql")),
     ] {
         if db.query_row(
             "SELECT count(*) FROM schema_migrations WHERE version=?",
