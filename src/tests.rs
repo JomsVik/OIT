@@ -217,8 +217,9 @@ fn monitor_inventory_roundtrip() {
         &a,
     )
     .unwrap();
-    assert_eq!(data[0]["location"], "204");
-    assert_eq!(data[0]["serial_number"], "SN1");
+    let record = data.as_array().unwrap().iter().find(|r| r["id"] == m["id"]).expect("created monitor missing");
+    assert_eq!(record["location"], "204");
+    assert_eq!(record["serial_number"], "SN1");
     portal::handle(
         &mut db,
         "DELETE",
@@ -336,7 +337,7 @@ fn migrations_are_repeatable() {
         rows(&db, "SELECT * FROM schema_migrations", &[])
             .unwrap()
             .len(),
-        5
+        6
     );
 }
 #[test]
@@ -802,4 +803,18 @@ async fn csrf_and_static_file_boundaries() {
             StatusCode::NOT_FOUND
         );
     }
+}
+
+#[test]
+fn imported_inventory_counts_and_repeatability() {
+    let (mut db, _) = setup();
+    for _ in 0..2 {
+        initialize(&mut db).unwrap();
+        for (table, expected) in [("inventory_computers",142),("inventory_laptops",34),("inventory_printers",77),("inventory_monitors",127)] {
+            let count: i64 = db.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0)).unwrap();
+            assert_eq!(count, expected, "{table}");
+        }
+    }
+    let integrity: String = db.query_row("PRAGMA integrity_check", [], |r| r.get(0)).unwrap();
+    assert_eq!(integrity, "ok");
 }
